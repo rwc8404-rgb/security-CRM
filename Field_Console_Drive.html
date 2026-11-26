@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Field Console — Eastern NC Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9EDF0; --surface:#FFFFFF; --surface-2:#F4F7F9;
+  --ink:#131C24; --muted:#5C6B77; --faint:#8996A1; --line:#D5DDE2;
+  --steel:#182632; --steel-2:#22384a; --steel-line:#31485c;
+  --signal:#F2921D; --signal-dk:#C6740F;
+  --ok:#1C8A4E; --ok-bg:#E4F3EA; --warn:#B9760E; --warn-bg:#FBF0DC;
+  --gap:#C23B2B; --gap-bg:#FBE7E4; --info:#2C6E9B;
+  --r:14px; --r-sm:9px; --tap:46px;
+  --shadow:0 1px 2px rgba(19,28,36,.06),0 4px 16px rgba(19,28,36,.06);
+  --shadow-lg:0 10px 34px rgba(19,28,36,.16);
+  --mono:'Roboto Mono',ui-monospace,monospace;
+  --cond:'Barlow Semi Condensed',system-ui,sans-serif;
+  --body:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--body); background:var(--paper); color:var(--ink);
+  font-size:15px; line-height:1.5; padding-bottom:calc(var(--tap) + 150px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:16px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.cond{font-family:var(--cond)}
+/* ---- Top instrument bar ---- */
+.topbar{
+  position:sticky;top:0;z-index:40;background:var(--steel);color:#EAF1F6;
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  box-shadow:0 2px 14px rgba(0,0,0,.28);
+}
+.topbar-row{display:flex;align-items:center;gap:11px}
+.brandmark{
+  width:34px;height:34px;border-radius:9px;flex:0 0 auto;
+  background:linear-gradient(150deg,var(--signal),var(--signal-dk));
+  display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,255,255,.12) inset;
+}
+.brandmark svg{width:19px;height:19px;stroke:#1a1205;stroke-width:2.4;fill:none}
+.brand-txt .k{font-family:var(--cond);font-weight:700;font-size:17px;letter-spacing:.04em;line-height:1;text-transform:uppercase}
+.brand-txt .s{font-size:10.5px;color:#93A7B5;letter-spacing:.12em;text-transform:uppercase;margin-top:2px}
+.view-tag{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:#8FA6B4;text-align:right;letter-spacing:.05em}
+.view-tag b{display:block;color:var(--signal);font-size:12px;letter-spacing:.09em}
+/* status strip */
+.statusstrip{
+  display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:9px;
+  border-top:1px solid var(--steel-line);font-size:11.5px;color:#A9BDC9;
+  overflow-x:auto;scrollbar-width:none;
+}
+.statusstrip::-webkit-scrollbar{display:none}
+.led{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-family:var(--cond);letter-spacing:.03em;text-transform:uppercase;font-size:11px}
+.led .dot{width:8px;height:8px;border-radius:50%;background:#3a5163;box-shadow:0 0 0 2px rgba(255,255,255,.04)}
+.led.on .dot{background:var(--signal);box-shadow:0 0 7px var(--signal)}
+.statusstrip .acct{color:#EAF1F6;font-family:var(--body);font-weight:600;text-transform:none;font-size:12px}
+/* ---- layout ---- */
+.wrap{max-width:760px;margin:0 auto;padding:16px 14px 20px}
+.screen{display:none}
+.screen.active{display:block;animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.eyebrow{font-family:var(--cond);text-transform:uppercase;letter-spacing:.14em;font-size:11.5px;color:var(--signal-dk);font-weight:700}
+.page-h{font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:.01em;line-height:1.05;margin:3px 0 3px}
+.page-sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+/* card */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}
+.card-pad{padding:15px 15px}
+/* accordion */
+.acc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:11px;overflow:hidden}
+.acc-head{display:flex;align-items:center;gap:11px;width:100%;padding:14px 15px;text-align:left}
+.acc-head .ic{width:30px;height:30px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line)}
+.acc-head .ic svg{width:17px;height:17px;stroke:var(--steel-2);stroke-width:2;fill:none}
+.acc-head .ttl{font-family:var(--cond);font-weight:700;font-size:16.5px;letter-spacing:.02em;flex:1}
+.acc-head .cnt{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);padding:2px 7px;border-radius:20px}
+.acc-head .chev{width:18px;height:18px;stroke:var(--faint);stroke-width:2.4;fill:none;transition:transform .2s}
+.acc.open .acc-head .chev{transform:rotate(180deg)}
+.acc-body{display:none;padding:2px 15px 16px;border-top:1px solid var(--line)}
+.acc.open .acc-body{display:block}
+.sub-h{font-family:var(--cond);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--steel-2);margin:16px 0 9px;padding-bottom:6px;border-bottom:1px dashed var(--line)}
+.sub-h:first-child{margin-top:12px}
+/* fields */
+.field{margin-bottom:13px}
+.field > label{display:block;font-weight:600;font-size:12.5px;color:var(--ink);margin-bottom:6px;letter-spacing:.01em}
+.req{color:var(--gap);font-weight:700;margin-left:3px}
+.hint{color:var(--faint);font-weight:400;font-size:11.5px}
+input[type=text],input[type=number],input[type=email],input[type=tel],input[type=date],select,textarea{
+  width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);
+  background:var(--surface);color:var(--ink);min-height:var(--tap);transition:border-color .15s,box-shadow .15s;
+}
+textarea{min-height:78px;resize:vertical;line-height:1.45}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px rgba(242,146,29,.16)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235C6B77' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:460px){.grid2{grid-template-columns:1fr}}
+/* checkbox grid (sibling selectors instead of :has() for faster style invalidation) */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative;display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--surface);font-size:13px;font-weight:500;min-height:42px;user-select:none;transition:.13s}
+.chip input{position:absolute;opacity:0;width:0;height:0}
+.chip .bx{width:17px;height:17px;border-radius:5px;border:2px solid var(--faint);flex:0 0 auto;display:grid;place-items:center;transition:.13s;z-index:1}
+.chip .bx svg{width:11px;height:11px;stroke:#fff;stroke-width:3.4;fill:none;opacity:0}
+.chip span:last-child{z-index:1}
+.chip input:checked ~ .bx{background:var(--signal);border-color:var(--signal)}
+.chip input:checked ~ .bx svg{opacity:1}
+.chip input:checked ~ .chip-bg{position:absolute;inset:-1.5px;border-radius:var(--r-sm);border:1.5px solid var(--signal);background:#FDF3E5;pointer-events:none}
+.chip.radiochip .bx{border-radius:50%}
+/* dynamic table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin-top:4px;-webkit-overflow-scrolling:touch}
+table.survey{border-collapse:collapse;width:100%;min-width:640px}
+table.survey th{font-family:var(--cond);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:9px 8px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+table.survey td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.survey input,table.survey select{min-height:38px;padding:7px 8px;font-size:14px;border-width:1px}
+[data-showif][hidden]{display:none!important}
+table.survey textarea.cellarea{width:100%;min-width:230px;height:38px;min-height:38px;padding:7px 8px;font-size:14px;border-width:1px;line-height:1.35;resize:none;overflow:hidden;transition:height .15s}
+table.survey textarea.cellarea:focus{height:150px;overflow:auto;position:relative;z-index:2}
+table.survey td.rownum{font-family:var(--mono);color:var(--faint);text-align:center;font-size:12px;width:30px}
+.del-row{width:34px;height:34px;border-radius:7px;display:grid;place-items:center;background:var(--gap-bg)}
+.del-row svg{width:15px;height:15px;stroke:var(--gap);stroke-width:2.2;fill:none}
+.btn-addrow{margin-top:9px;display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border:1.5px dashed var(--signal);color:var(--signal-dk);border-radius:var(--r-sm);font-family:var(--cond);font-weight:600;letter-spacing:.03em;font-size:13.5px;background:#FDF6EC}
+.btn-addrow svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.6;fill:none}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:10px;font-family:var(--cond);font-weight:600;font-size:15px;letter-spacing:.03em;min-height:var(--tap);transition:.15s}
+.btn svg{width:17px;height:17px;stroke:currentColor;stroke-width:2.3;fill:none}
+.btn-primary{background:var(--signal);color:#241606;box-shadow:0 2px 10px rgba(242,146,29,.34)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-ghost{background:var(--surface);border:1.5px solid var(--line);color:var(--ink)}
+.btn-steel{background:var(--steel);color:#EAF1F6}
+.btn-block{width:100%}
+.btn-sm{padding:8px 12px;font-size:13px;min-height:38px;border-radius:8px}
+/* system picker */
+.sys-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.sys-tile{position:relative;border:1.5px solid var(--line);border-radius:var(--r);background:var(--surface);padding:14px 13px;text-align:left;transition:.14s;overflow:hidden}
+.sys-tile .st-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--surface-2);margin-bottom:9px}
+.sys-tile .st-ic svg{width:19px;height:19px;stroke-width:2;fill:none}
+.sys-tile .st-name{font-family:var(--cond);font-weight:700;font-size:16px;letter-spacing:.02em}
+.sys-tile .st-plat{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
+.sys-tile .st-chk{position:absolute;top:11px;right:11px;width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;transition:.14s}
+.sys-tile .st-chk svg{width:12px;height:12px;stroke:#fff;stroke-width:3.4;fill:none;opacity:0}
+.sys-tile[aria-pressed=true]{border-color:var(--signal);background:#FDF6EC;box-shadow:0 0 0 1px var(--signal)}
+.sys-tile[aria-pressed=true] .st-chk{background:var(--signal);border-color:var(--signal)}
+.sys-tile[aria-pressed=true] .st-chk svg{opacity:1}
+.sys-fire .st-ic svg{stroke:#C23B2B}.sys-cctv .st-ic svg{stroke:#2C6E9B}
+.sys-access .st-ic svg{stroke:#7A4FB5}.sys-burglar .st-ic svg{stroke:#1C8A4E}
+/* bottom nav */
+.botnav{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--steel);color:#9FB3C0;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));display:flex;gap:4px;box-shadow:0 -3px 16px rgba(0,0,0,.24)}
+.navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:10px;color:#8098A8;font-family:var(--cond);font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.navbtn svg{width:21px;height:21px;stroke:currentColor;stroke-width:2;fill:none}
+.navbtn.on{color:var(--signal);background:rgba(242,146,29,.12)}
+/* step footer inside site walk */
+.stepbar{position:fixed;left:0;right:0;bottom:calc(var(--tap) + 24px + env(safe-area-inset-bottom));z-index:44;
+  background:rgba(255,255,255,.97);border-top:1px solid var(--line);
+  padding:9px 14px;display:none;align-items:center;gap:10px;max-width:760px;margin:0 auto}
+.stepbar.show{display:flex}
+.progress{flex:1;display:flex;align-items:center;gap:6px}
+.pdot{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.pdot.done{background:var(--signal)}
+.pdot.cur{background:var(--steel-2)}
+/* proposal cards */
+.prop-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}
+.prop-head{padding:13px 15px;background:var(--steel);color:#EAF1F6;display:flex;align-items:center;gap:10px}
+.prop-head .ph-ic{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.1);display:grid;place-items:center}
+.prop-head .ph-ic svg{width:17px;height:17px;stroke:var(--signal);stroke-width:2;fill:none}
+.prop-head .ph-t{font-family:var(--cond);font-weight:700;font-size:16px;letter-spacing:.03em;flex:1}
+.prop-body{padding:6px 15px 14px}
+.prow{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:none}
+.prow .pl{font-family:var(--cond);text-transform:uppercase;letter-spacing:.05em;font-size:11px;color:var(--muted);flex:0 0 118px;padding-top:1px}
+.prow .pv{flex:1;font-size:13.5px;font-weight:500;color:var(--ink);word-break:break-word}
+.prow .pv .plat{font-weight:700}
+.prow .pv .why{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:3px}
+.copy-bar{padding:11px 15px;border-top:1px solid var(--line);background:var(--surface-2)}
+/* meddpicc */
+.gap-summary{display:flex;align-items:center;gap:14px;padding:15px;border-radius:var(--r);color:#EAF1F6;background:var(--steel);margin-bottom:14px;box-shadow:var(--shadow)}
+.gap-summary .big{font-family:var(--mono);font-weight:700;font-size:34px;line-height:1}
+.gap-summary .lbl{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:#A9BDC9}
+.gap-summary .meter{flex:1;height:8px;border-radius:5px;background:#31485c;overflow:hidden}
+.gap-summary .meter i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--signal))}
+.med-row{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:9px;box-shadow:var(--shadow)}
+.med-led{width:12px;height:12px;border-radius:50%;flex:0 0 auto;margin-top:4px}
+.med-led.ok{background:var(--ok);box-shadow:0 0 7px rgba(28,138,78,.6)}
+.med-led.gap{background:var(--gap);box-shadow:0 0 7px rgba(194,59,43,.55)}
+.med-main{flex:1}
+.med-el{font-family:var(--cond);font-weight:700;font-size:15px;letter-spacing:.02em}
+.med-el small{font-family:var(--body);font-weight:500;color:var(--faint);font-size:11px;letter-spacing:0;text-transform:none;margin-left:6px}
+.med-msg{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+.med-badge{font-family:var(--cond);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:4px 9px;border-radius:20px;white-space:nowrap;flex:0 0 auto}
+.med-badge.ok{background:var(--ok-bg);color:var(--ok)}
+.med-badge.gap{background:var(--gap-bg);color:var(--gap)}
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(var(--tap) + 60px);transform:translateX(-50%) translateY(20px);
+  background:var(--steel);color:#fff;padding:11px 18px;border-radius:30px;font-size:13.5px;font-weight:500;
+  box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.25s;z-index:60;display:flex;align-items:center;gap:8px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:16px;height:16px;stroke:var(--signal);stroke-width:2.5;fill:none}
+.empty{text-align:center;padding:34px 20px;color:var(--muted)}
+.empty svg{width:38px;height:38px;stroke:var(--faint);stroke-width:1.6;fill:none;margin-bottom:10px}
+.empty .et{font-family:var(--cond);font-weight:700;font-size:16px;color:var(--ink);letter-spacing:.02em}
+.callout{display:flex;gap:10px;padding:12px 13px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--line);font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.callout svg{width:17px;height:17px;stroke:var(--signal-dk);stroke-width:2;fill:none;flex:0 0 auto;margin-top:1px}
+/* ---- Tracker ---- */
+.tabscroll{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none;margin:0 -2px}
+.tabscroll::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;padding:9px 15px;border-radius:22px;border:1.5px solid var(--line);background:var(--surface);font-family:var(--cond);font-weight:600;font-size:13.5px;letter-spacing:.03em;color:var(--muted);flex:0 0 auto;display:flex;align-items:center;gap:7px}
+.tab .tct{font-family:var(--mono);font-size:10.5px;background:var(--surface-2);border-radius:20px;padding:1px 7px;color:var(--muted)}
+.tab.on{background:var(--steel);color:#EAF1F6;border-color:var(--steel)}
+.tab.on .tct{background:rgba(255,255,255,.16);color:#EAF1F6}
+.rec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;content-visibility:auto;contain-intrinsic-size:0 110px}
+.rec-head{display:flex;align-items:center;gap:10px;padding:12px 13px}
+.rec-head .rc-t{font-weight:700;font-size:14.5px;flex:1;line-height:1.25}
+.rec-head .rc-t .parent{display:block;font-family:var(--cond);font-weight:600;font-size:11px;color:var(--signal-dk);text-transform:uppercase;letter-spacing:.04em}
+.pill{font-family:var(--cond);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.pill.tier-Bullseye{background:#FBE7E4;color:var(--gap)}
+.pill.tier-Strong{background:var(--warn-bg);color:var(--warn)}
+.pill.tier-Weak{background:var(--surface-2);color:var(--muted)}
+.pill.st-Open{background:#E4EEF5;color:var(--info)}
+.pill.st-Won{background:var(--ok-bg);color:var(--ok)}
+.pill.st-Lost{background:var(--gap-bg);color:var(--gap)}
+.rec-meta{display:flex;flex-wrap:wrap;gap:5px 14px;padding:0 13px 11px;font-size:12px;color:var(--muted)}
+.rec-meta b{color:var(--ink);font-weight:600}
+.rec-meta .m{display:inline-flex;align-items:center;gap:5px}
+.rec-meta .m svg{width:13px;height:13px;stroke:var(--faint);stroke-width:2;fill:none}
+.rec-actions{display:flex;border-top:1px solid var(--line)}
+.rec-actions button{flex:1;padding:10px;font-family:var(--cond);font-weight:600;font-size:12.5px;letter-spacing:.04em;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.rec-actions button+button{border-left:1px solid var(--line)}
+.rec-actions svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.2;fill:none}
+.rec-actions .del{color:var(--gap)}
+.tracker-bar{display:flex;gap:9px;margin-bottom:13px;align-items:center}
+.tracker-bar input{flex:1}
+/* modal */
+.modal-scrim{position:fixed;inset:0;background:rgba(19,28,36,.55);z-index:70;display:none;align-items:flex-end;justify-content:center}
+.modal-scrim.show{display:flex;animation:fade .18s}
+.modal{background:var(--surface);width:100%;max-width:640px;max-height:92vh;border-radius:18px 18px 0 0;overflow:hidden;display:flex;flex-direction:column;animation:slideup .24s cubic-bezier(.2,.8,.3,1)}
+@keyframes slideup{from{transform:translateY(30px)}to{transform:none}}
+.modal-head{padding:15px 16px 13px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--surface)}
+.modal-head .mh-t{font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.02em;flex:1}
+.modal-close{width:34px;height:34px;border-radius:9px;background:var(--surface-2);display:grid;place-items:center}
+.modal-close svg{width:17px;height:17px;stroke:var(--muted);stroke-width:2.4;fill:none}
+.modal-body{overflow-y:auto;padding:15px 16px;-webkit-overflow-scrolling:touch}
+.modal-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:10px;background:var(--surface)}
+/* ---- Dashboard ---- */
+.dash-date{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.dash-date b{color:var(--ink)}
+.sec-title{display:flex;align-items:center;gap:9px;margin:20px 0 11px}
+.sec-title .st-bar{width:4px;height:17px;border-radius:3px;background:var(--signal)}
+.sec-title h3{font-family:var(--cond);font-weight:700;font-size:16px;letter-spacing:.03em;text-transform:uppercase}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:440px){.kpi-grid{grid-template-columns:1fr}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--line)}
+.kpi.ontrack::before{background:var(--ok)}.kpi.close::before{background:var(--signal)}.kpi.behind::before{background:var(--gap)}
+.kpi .k-lbl{font-family:var(--cond);text-transform:uppercase;letter-spacing:.04em;font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.2;min-height:28px}
+.kpi .k-val{font-family:var(--mono);font-weight:700;font-size:27px;line-height:1;margin:6px 0 4px}
+.kpi .k-tgt{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.kpi .k-stat{margin-top:8px;font-family:var(--cond);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px}
+.kpi .k-stat .d{width:7px;height:7px;border-radius:50%}
+.kpi.ontrack .k-stat{background:var(--ok-bg);color:var(--ok)}.kpi.ontrack .k-stat .d{background:var(--ok)}
+.kpi.close .k-stat{background:var(--warn-bg);color:var(--warn)}.kpi.close .k-stat .d{background:var(--signal)}
+.kpi.behind .k-stat{background:var(--gap-bg);color:var(--gap)}.kpi.behind .k-stat .d{background:var(--gap)}
+.dtable{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);font-size:13px}
+.dtable th{font-family:var(--cond);text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:var(--muted);text-align:right;padding:9px 11px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.dtable th:first-child{text-align:left}
+.dtable td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.dtable td:first-child{text-align:left;font-family:var(--body);font-weight:500}
+.dtable tr:last-child td{border-bottom:none}
+.dtable .tot td{background:var(--surface-2);font-weight:700}
+.wr-badge{font-family:var(--cond);font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px}
+.tier-bars{display:flex;flex-direction:column;gap:9px}
+.tier-bar{display:flex;align-items:center;gap:10px}
+.tier-bar .tb-lbl{font-family:var(--cond);font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;width:74px}
+.tier-bar .tb-track{flex:1;height:14px;border-radius:7px;background:var(--surface-2);overflow:hidden;border:1px solid var(--line)}
+.tier-bar .tb-fill{height:100%;border-radius:7px}
+.tier-bar .tb-n{font-family:var(--mono);font-weight:700;font-size:14px;width:24px;text-align:right}
+.tb-Bullseye{background:var(--gap)}.tb-Strong{background:var(--signal)}.tb-Weak{background:var(--faint)}
+.trend-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.trend-scroll .dtable{border:none;border-radius:0;min-width:520px;box-shadow:none}
+.spark{display:flex;align-items:flex-end;gap:4px;height:52px;padding:10px 12px 4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:10px}
+.spark .bar{flex:1;background:linear-gradient(180deg,var(--signal),var(--signal-dk));border-radius:3px 3px 0 0;min-height:3px;opacity:.85}
+.spark .bar:last-child{background:linear-gradient(180deg,var(--steel-2),var(--steel))}
+.overdue-flag{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);margin-bottom:10px}
+.overdue-flag .of-n{font-family:var(--mono);font-weight:700;font-size:26px;width:44px;text-align:center}
+.overdue-flag.alert{border-color:var(--gap);background:var(--gap-bg)}
+.overdue-flag.alert .of-n{color:var(--gap)}
+.overdue-flag.clear .of-n{color:var(--ok)}
+.overdue-flag .of-l{font-weight:600;font-size:13.5px}
+.overdue-flag .of-l small{display:block;color:var(--muted);font-weight:400;font-size:11.5px;margin-top:1px}
+/* photos */
+.photostrip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.photostrip:empty{display:none}
+.thumb{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--steel-2)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-x{position:absolute;top:3px;right:3px;width:22px;height:22px;padding:0;border:none;border-radius:50%;background:rgba(24,38,50,.82);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.thumb-x svg{width:13px;height:13px;stroke:#fff}
+.btn-addphoto{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);padding:0 16px;border:1.5px dashed var(--line);border-radius:12px;background:var(--surface);color:var(--steel);font-weight:600;font-size:14px;cursor:pointer}
+.btn-addphoto svg{width:18px;height:18px;stroke:var(--signal)}
+.btn-addphoto:active{background:var(--paper)}
+.photocell{text-align:center;white-space:nowrap}
+.rowcam{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--surface);cursor:pointer;vertical-align:middle}
+.rowcam svg{width:18px;height:18px;stroke:var(--steel)}
+.photocell.has .rowcam{display:none}
+.rowthumb{width:40px;height:40px;object-fit:cover;border-radius:9px;border:1px solid var(--signal);vertical-align:middle;cursor:pointer}
+/* resume banner */
+.resume-banner{display:flex;align-items:center;gap:12px;justify-content:space-between;background:#FFF6E7;border:1px solid var(--signal);border-left-width:4px;border-radius:12px;padding:12px 14px;margin:4px 0 16px}
+.rb-txt{display:flex;flex-direction:column;line-height:1.3}
+.rb-txt b{font-family:'Barlow Semi Condensed',sans-serif;font-size:15px;color:var(--ink)}
+.rb-txt span{font-size:12.5px;color:var(--steel)}
+.rb-btns{display:flex;gap:8px;flex-shrink:0}
+.rb-btns .btn{width:auto;padding:0 14px}
+/* =============== PRINT / PDF PROPOSAL SHEET =============== */
+#printRoot{display:none}
+@media screen{#printRoot{display:none!important}}
+@media print{
+ @page{margin:14mm}
+ body{padding:0!important;background:#fff!important}
+ .topbar,.statusstrip,.botnav,.stepbar,.screen,.modal-scrim,.toast,#resumeSlot{display:none!important}
+ #printRoot{display:block!important;color:#111;font-family:'Inter',Arial,sans-serif;font-size:11px;line-height:1.45}
+ .ps-hd{border-bottom:2.5px solid #182632;padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end}
+ .ps-brand{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:.02em;color:#182632}
+ .ps-brand small{display:block;font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#F2921D}
+ .ps-meta{text-align:right;font-size:10px;color:#333}
+ .ps-co{font-family:'Barlow Semi Condensed',sans-serif;font-size:22px;font-weight:700;color:#111;margin:2px 0}
+ .ps-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:10px 0 4px}
+ .ps-kv{display:flex;gap:6px;padding:2px 0;border-bottom:1px dotted #ccc}
+ .ps-kv b{min-width:96px;color:#555;font-weight:600}
+ .ps-sec{margin-top:16px;break-inside:avoid}
+ .ps-sec-h{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#182632;padding:5px 9px;border-radius:3px}
+ .ps-plat{background:#FBF0DC;border-left:3px solid #F2921D;padding:6px 9px;margin:8px 0;font-size:11px}
+ .ps-plat b{color:#182632}
+ .ps-tbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:10px}
+ .ps-tbl th{background:#F0F3F5;text-align:left;padding:4px 6px;border:1px solid #cdd6db;font-weight:600}
+ .ps-tbl td{padding:4px 6px;border:1px solid #dde3e7;vertical-align:middle;white-space:pre-wrap}
+ .ps-tbl img{width:54px;height:54px;object-fit:cover;border-radius:3px;display:block}
+ .ps-gal{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+ .ps-gal figure{margin:0;width:150px;break-inside:avoid}
+ .ps-gal img{width:150px;height:112px;object-fit:cover;border:1px solid #bbb;border-radius:4px;display:block}
+ .ps-gal figcaption{font-size:9px;color:#555;margin-top:2px}
+ .ps-note{white-space:pre-wrap;font-size:10.5px;color:#222;margin:6px 0}
+ .ps-ft{margin-top:20px;border-top:1px solid #ccc;padding-top:6px;font-size:9px;color:#777;text-align:center}
+ .ps-open{background:#FBE7E4;border:1px solid #d99;border-radius:4px;padding:6px 9px;margin:8px 0;font-size:10px}
+ .ps-open b{color:#a33}
+}
+.pdfstage{position:fixed;left:-10000px;top:0;width:720px;background:#fff;color:#111;font-family:'Inter',Arial,sans-serif;font-size:11px;line-height:1.45}
+.pdfstage .ps-hd{border-bottom:2.5px solid #182632;padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end}
+.pdfstage .ps-brand{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:.02em;color:#182632}
+.pdfstage .ps-brand small{display:block;font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#F2921D}
+.pdfstage .ps-meta{text-align:right;font-size:10px;color:#333}
+.pdfstage .ps-co{font-family:'Barlow Semi Condensed',sans-serif;font-size:22px;font-weight:700;color:#111;margin:2px 0}
+.pdfstage .ps-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:10px 0 4px}
+.pdfstage .ps-kv{display:flex;gap:6px;padding:2px 0;border-bottom:1px dotted #ccc}
+.pdfstage .ps-kv b{min-width:96px;color:#555;font-weight:600}
+.pdfstage .ps-sec{margin-top:16px;break-inside:avoid}
+.pdfstage .ps-sec-h{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#182632;padding:5px 9px;border-radius:3px}
+.pdfstage .ps-plat{background:#FBF0DC;border-left:3px solid #F2921D;padding:6px 9px;margin:8px 0;font-size:11px}
+.pdfstage .ps-plat b{color:#182632}
+.pdfstage .ps-tbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:10px}
+.pdfstage .ps-tbl th{background:#F0F3F5;text-align:left;padding:4px 6px;border:1px solid #cdd6db;font-weight:600}
+.pdfstage .ps-tbl td{padding:4px 6px;border:1px solid #dde3e7;vertical-align:middle;white-space:pre-wrap}
+.pdfstage .ps-tbl img{width:54px;height:54px;object-fit:cover;border-radius:3px;display:block}
+.pdfstage .ps-gal{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.pdfstage .ps-gal figure{margin:0;width:150px;break-inside:avoid}
+.pdfstage .ps-gal img{width:150px;height:112px;object-fit:cover;border:1px solid #bbb;border-radius:4px;display:block}
+.pdfstage .ps-gal figcaption{font-size:9px;color:#555;margin-top:2px}
+.pdfstage .ps-note{white-space:pre-wrap;font-size:10.5px;color:#222;margin:6px 0}
+.pdfstage .ps-ft{margin-top:20px;border-top:1px solid #ccc;padding-top:6px;font-size:9px;color:#777;text-align:center}
+.pdfstage .ps-open{background:#FBE7E4;border:1px solid #d99;border-radius:4px;padding:6px 9px;margin:8px 0;font-size:10px}
+.pdfstage .ps-open b{color:#a33}
+/* ===== topbar buttons, outdoor mode, voice, live cues ===== */
+.topbtns{display:flex;gap:6px;margin-left:8px;flex-shrink:0}
+.view-tag{max-width:34vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+@media (max-width:340px){.view-tag{display:none}}
+.topbtn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--steel-line);background:rgba(255,255,255,.06);border-radius:9px;cursor:pointer}
+.topbtn svg{width:19px;height:19px;stroke:#cdd8e0;fill:none;stroke-width:2}
+.topbtn.on{background:var(--signal);border-color:var(--signal)}
+.topbtn.on svg{stroke:#1a1200}
+.ta-wrap{position:relative}
+.ta-wrap textarea{width:100%;padding-right:44px}
+.mic{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mic svg{width:17px;height:17px;stroke:var(--steel);fill:none;stroke-width:2}
+.mic.rec{background:var(--gap);border-color:var(--gap);animation:micpulse 1s infinite}
+.mic.rec svg{stroke:#fff}
+@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(194,59,43,.45)}50%{box-shadow:0 0 0 6px rgba(194,59,43,0)}}
+body.no-voice .mic{display:none}
+.cnt.done{background:var(--ok);color:#fff}
+.cnt.part{background:var(--warn-bg);color:var(--warn)}
+.livemedd{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:14px 0 6px}
+.livemedd .lm-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.livemedd .lm-ttl{font-family:var(--cond);font-weight:700;font-size:13px;letter-spacing:.03em;text-transform:uppercase;color:var(--steel)}
+.livemedd .lm-n{font-family:var(--mono);font-size:12px;font-weight:600}
+.lm-dots{display:flex;gap:5px}
+.lm-dot{flex:1;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;background:var(--gap-bg);color:var(--gap);border:1px solid #e6c3bd}
+.lm-dot.ok{background:var(--ok-bg);color:var(--ok);border-color:#bfe3cd}
+/* ===== nav badge ===== */
+.navbadge{position:absolute;top:2px;right:calc(50% - 24px);min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--gap);color:#fff;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;font-family:var(--mono)}
+.navbadge.show{display:flex}
+.navbtn{position:relative}
+/* ===== TODAY / TASKS ===== */
+.today-hd{display:flex;gap:10px;margin:2px 0 14px}
+.th-stat{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center}
+.th-stat .n{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1}
+.th-stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
+.th-stat.over .n{color:var(--gap)}.th-stat.due .n{color:var(--signal)}.th-stat.done .n{color:var(--ok)}
+.task-add{display:flex;gap:8px;margin-bottom:14px}
+.task-add input{flex:1}
+.tgrp{margin:0 0 6px}
+.tgrp-h{font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.tgrp-h.over{color:var(--gap)}
+.tgrp-h .c{font-family:var(--mono);background:var(--surface-2);border-radius:10px;padding:1px 7px;font-size:11px}
+.task{display:flex;align-items:flex-start;gap:11px;background:var(--surface);border:1px solid var(--line);border-left-width:4px;border-radius:12px;padding:12px;margin-bottom:9px;content-visibility:auto;contain-intrinsic-size:0 82px}
+.task.p-high{border-left-color:var(--gap)}.task.p-normal{border-left-color:var(--signal)}.task.p-low{border-left-color:var(--muted)}
+.task.is-done{opacity:.55}
+.tcheck{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.tcheck svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:3;opacity:0}
+.task.is-done .tcheck{background:var(--ok);border-color:var(--ok)}
+.task.is-done .tcheck svg{opacity:1}
+.task.is-done .t-title{text-decoration:line-through}
+.t-body{flex:1;min-width:0}
+.t-title{font-weight:600;font-size:14.5px;color:var(--ink);line-height:1.3}
+.t-sub{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px;align-items:center}
+.t-sub .tg{font-size:11px;color:var(--muted)}
+.t-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:6px;background:var(--surface-2);color:var(--steel)}
+.t-badge.src-prospects{background:#E7F0FA;color:#2b6cb0}.t-badge.src-pipeline{background:var(--warn-bg);color:var(--warn)}.t-badge.src-won{background:var(--ok-bg);color:var(--ok)}.t-badge.src-manual{background:#efe7fa;color:#6b46c1}
+.t-due{font-size:11px;font-weight:600;font-family:var(--mono)}
+.t-due.over{color:var(--gap)}
+.t-open{margin-left:auto;font-size:12px;color:var(--signal);font-weight:600;background:none;border:none;cursor:pointer;padding:4px}
+.done-toggle{text-align:center;color:var(--muted);font-size:13px;padding:10px;cursor:pointer}
+/* ===== ADMIN / RULES ===== */
+.rule{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.rule.off{opacity:.55}
+.rule-top{display:flex;align-items:center;gap:10px}
+.rule-name{font-weight:600;font-size:14.5px;flex:1}
+.rule-desc{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4}
+.rule-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.rule-tags .rt{font-size:10.5px;font-weight:600;background:var(--surface-2);border-radius:6px;padding:2px 7px;color:var(--steel)}
+.rule-acts{display:flex;gap:8px;margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
+.rule-acts button{flex:1;min-height:38px;border:1px solid var(--line);background:var(--surface);border-radius:9px;font-size:13px;font-weight:600;color:var(--steel);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.rule-acts button svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+.rule-acts button.del{color:var(--gap)}
+.swi{position:relative;width:44px;height:26px;flex-shrink:0;cursor:pointer}
+.swi input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.swi .track{position:absolute;inset:0;background:var(--line);border-radius:13px;transition:.15s}
+.swi .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.swi input:checked ~ .track{background:var(--ok)}
+.swi input:checked ~ .knob{left:21px}
+.admin-note{background:var(--warn-bg);border:1px solid #e8d5ac;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6b4e13;margin-bottom:14px;line-height:1.45}
+.datagrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.dbtn{display:flex;align-items:center;gap:8px;min-height:var(--tap);padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:11px;font-size:13px;font-weight:600;color:var(--steel);cursor:pointer;text-align:left}
+.dbtn svg{width:16px;height:16px;stroke:var(--signal);fill:none;stroke-width:2;flex-shrink:0}
+.dbtn span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dbtn b{font-family:var(--mono);font-size:11px;background:var(--surface-2);border-radius:8px;padding:1px 6px;color:var(--muted)}
+.datarow{display:flex;gap:8px;margin-top:4px}
+.datarow label{flex:1;cursor:pointer}
+/* ===== OUTDOOR / HIGH-CONTRAST MODE ===== */
+body.outdoor{--paper:#FFFFFF;--surface:#FFFFFF;--surface-2:#EEF1F3;--line:#7C8B96;--muted:#2C3843;--ink:#000000}
+body.outdoor .page-sub,body.outdoor .eyebrow,body.outdoor .sub-h{color:#22303a!important}
+body.outdoor .field label{color:#000!important;font-weight:600}
+body.outdoor input,body.outdoor select,body.outdoor textarea{border-width:2px!important;border-color:#5a6a75!important;font-size:16px!important;color:#000!important}
+body.outdoor .chip{border-width:2px!important}
+body.outdoor .acc{border-width:2px!important}
+body.outdoor .btn{font-weight:800!important;letter-spacing:.02em}
+body.outdoor .btn-primary{box-shadow:0 0 0 2px rgba(242,146,29,.35)}
+body.outdoor .task,body.outdoor .rule,body.outdoor .kpi,body.outdoor .rec,body.outdoor .prop-card{border-width:2px!important}
+body.outdoor .t-title,body.outdoor .rule-name{color:#000}
+body.outdoor .topbtn#outdoorBtn{background:var(--signal);border-color:var(--signal)}
+body.outdoor .topbtn#outdoorBtn svg{stroke:#1a1200}
+/* ===== REPORTS ===== */
+.navbtn{font-size:10px;letter-spacing:.02em;padding:6px 1px}
+.fchips{display:flex;flex-wrap:wrap;gap:7px}
+.fchip{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;min-height:38px;border:1px solid var(--line);background:var(--surface);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.fchip input{width:15px;height:15px;margin:0;accent-color:var(--signal)}
+.fchip.on{border-color:var(--signal);background:#FEF6EA;color:var(--steel)}
+.rpt-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin:16px 0 8px;padding-bottom:8px;border-bottom:2px solid var(--steel)}
+.rh-t{font-family:var(--cond);font-weight:700;font-size:17px;line-height:1.2;color:var(--steel)}
+.rh-n{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;text-align:right}
+.rtblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:11px;background:var(--surface)}
+.rtbl{border-collapse:collapse;width:100%;font-size:12.5px}
+.rtbl th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:9px 10px;font-family:var(--cond);font-weight:700;font-size:11.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--steel);border-bottom:1px solid var(--line);white-space:nowrap}
+.rtbl td{padding:9px 10px;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.rtbl td.n{text-align:right;font-family:var(--mono);font-size:12px}
+.rtbl tr:last-child td{border-bottom:none}
+.rtbl tr.tot td{background:var(--surface-2);font-weight:700;border-top:2px solid var(--steel)}
+.rmore{font-size:11.5px;color:var(--muted);text-align:center;padding:8px 0}
+/* ===== DASHBOARD v2 ===== */
+.pseg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:4px;margin:10px 0 8px;overflow-x:auto}
+.pseg-b{flex:1;min-width:84px;min-height:38px;border:none;background:none;border-radius:8px;font-family:var(--cond);font-weight:700;font-size:12.5px;letter-spacing:.02em;color:var(--muted);cursor:pointer;white-space:nowrap}
+.pseg-b.on{background:var(--steel);color:#fff}
+.hero{border-radius:14px;padding:14px;margin:12px 0 6px;border:1px solid var(--line);background:var(--surface)}
+.hero.ontrack{background:var(--ok-bg);border-color:#bfe3cd}
+.hero.close{background:var(--warn-bg);border-color:#e8d5ac}
+.hero.behind{background:var(--gap-bg);border-color:#e6c3bd}
+.hero-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hero-st{font-family:var(--cond);font-weight:700;font-size:26px;line-height:1;letter-spacing:.01em}
+.hero.ontrack .hero-st{color:var(--ok)}.hero.close .hero-st{color:var(--warn)}.hero.behind .hero-st{color:var(--gap)}
+.hero-sub{font-size:12.5px;color:var(--muted);font-weight:600}
+.hero-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.hact{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 11px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;font-weight:600;color:var(--steel);cursor:pointer}
+.hact svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+.hact.urgent{border-color:var(--gap);color:var(--gap)}
+.hact.clear{color:var(--ok);border-color:#bfe3cd;cursor:default}
+.kpi{display:block;width:100%;text-align:left;border:1px solid var(--line);cursor:pointer;font:inherit;color:inherit}
+.tc-col,.tier-bar,.hact,.pseg-b{font-family:inherit}
+.k-bar{position:relative;display:block;height:6px;border-radius:3px;background:var(--surface-2);margin:7px 0 6px;overflow:visible}
+.k-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--muted);display:block}
+.kpi.ontrack .k-bar i{background:var(--ok)}.kpi.close .k-bar i{background:var(--warn)}.kpi.behind .k-bar i{background:var(--gap)}
+.k-bar b{position:absolute;top:-3px;width:2px;height:12px;background:var(--steel);border-radius:1px}
+.hint-line{font-size:11.5px;color:var(--muted);text-align:center;padding:8px 0 2px}
+.tier-bar{width:100%;background:none;border:none;padding:6px 0;cursor:pointer;text-align:left}
+.dtable.drill tbody tr{cursor:pointer}
+.dtable.drill tbody tr:active{background:var(--surface-2)}
+.tchart{display:flex;align-items:flex-end;gap:5px;height:150px;overflow-x:auto;padding:4px 0 0}
+.tc-col{flex:1;min-width:38px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;background:none;border:none;cursor:pointer;padding:0}
+.tc-v{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--steel);margin-bottom:3px}
+.tc-bar{width:100%;max-width:34px;background:var(--signal);border-radius:4px 4px 0 0;min-height:4px}
+.tc-col:active .tc-bar{background:var(--steel)}
+.tc-l{font-size:10px;color:var(--muted);margin-top:5px;font-family:var(--mono);white-space:nowrap}
+/* active report filters */
+.fltchips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.fltchip{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:8px;background:#FEF6EA;border:1px solid var(--signal);font-size:11.5px;font-weight:600;color:var(--steel)}
+.fltchip button{background:none;border:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:0 0 0 2px}
+</style>
+</head>
+<body>
+<!-- Pre-compiled SVG Sprite Sheet -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></symbol>
+  <symbol id="ic-fire" viewBox="0 0 24 24"><path d="M12 2s4 4 4 8a4 4 0 01-8 0c0-1 .5-2 1-3 0 2 1 2 2 2 0-3-1-5 1-7z"/></symbol>
+  <symbol id="ic-cctv" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="9" rx="2"/><path d="M16 9l6-3v9l-6-3"/><circle cx="8" cy="10.5" r="2"/></symbol>
+  <symbol id="ic-access" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></symbol>
+  <symbol id="ic-burglar" viewBox="0 0 24 24"><path d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.6A2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.6a2 2 0 01-.5 2.1L8 9.6a16 16 0 006 6l1.2-1.2a2 2 0 012.1-.5c.8.3 1.7.5 2.6.6a2 2 0 011.7 2z"/></symbol>
+  <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M12 21s7-5.7 7-11a7 7 0 00-14 0c0 5.3 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="ic-money" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5a2.5 2 0 015 0c0 1.4-1.5 1.8-2.5 2s-2.5.6-2.5 2a2.5 2 0 005 0"/></symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+  <symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2l1.6 3.1 3.4-.6-.6 3.4L20 12l-3.1 1.6.6 3.4-3.4-.6L12 22l-1.6-3.1-3.4.6.6-3.4L2 12l3.1-1.6-.6-3.4 3.4.6z"/></symbol>
+  <symbol id="ic-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v4"/></symbol>
+  <symbol id="ic-flag" viewBox="0 0 24 24"><path d="M4 22V4M4 4h13l-2 4 2 4H4"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.5 21a2 2 0 01-3 0"/></symbol>
+  <symbol id="ic-today" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 14l2 2 4-4"/></symbol>
+  <symbol id="ic-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+</svg>
+
+<!-- ===== TOP INSTRUMENT BAR ===== -->
+<header class="topbar">
+  <div class="topbar-row">
+    <div class="brandmark"><svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+    <div class="brand-txt"><div class="k">Field Console</div><div class="s">Eastern NC Security</div></div>
+    <div class="view-tag">SITE-WALK OS<b id="viewTag">SITE WALK</b></div>
+    <div class="topbtns">
+      <button class="topbtn" id="outdoorBtn" aria-label="Outdoor mode" title="Outdoor / high-contrast"><svg><use href="#ic-sun"/></svg></button>
+      <button class="topbtn" id="adminBtn" aria-label="Follow-up admin" title="Backup &amp; settings"><svg><use href="#ic-gear"/></svg></button>
+    </div>
+  </div>
+  <div class="statusstrip" id="statusStrip">
+    <span class="acct" id="ssAcct">No active walk</span>
+    <span class="led" data-sys="fire"><span class="dot"></span>Fire</span>
+    <span class="led" data-sys="cctv"><span class="dot"></span>CCTV</span>
+    <span class="led" data-sys="access"><span class="dot"></span>Access</span>
+    <span class="led" data-sys="burglar"><span class="dot"></span>Intrusion</span>
+  </div>
+</header>
+<main>
+  <section id="screen-walk" class="screen active"></section>
+  <section id="screen-summary" class="screen"></section>
+  <section id="screen-gap" class="screen"></section>
+  <section id="screen-walks" class="screen"></section>
+  <section id="screen-admin" class="screen"></section>
+</main>
+<!-- step footer (site walk only) -->
+<div class="stepbar" id="stepbar">
+  <button class="btn btn-ghost btn-sm" id="stepBack"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+  <div class="progress" id="stepProgress"></div>
+  <button class="btn btn-primary btn-sm" id="stepNext">Next<svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+</div>
+<!-- bottom nav -->
+<nav class="botnav" id="botnav">
+  <button class="navbtn on" data-view="walk"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Walk</button>
+  <button class="navbtn" data-view="walks"><svg viewBox="0 0 24 24"><path d="M3 3h18v4H3z"/><path d="M3 10h18v4H3z"/><path d="M3 17h18v4H3z"/></svg>Walks</button>
+</nav>
+<div class="toast" id="toast"><svg><use href="#ic-check"/></svg><span id="toastMsg">Done</span></div>
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal">
+    <div class="modal-head"><div class="mh-t" id="modalTitle">Record</div><button class="modal-close" id="modalClose"><svg><use href="#ic-x"/></svg></button></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot"><button class="btn btn-ghost btn-block" id="modalCancel">Cancel</button><button class="btn btn-primary btn-block" id="modalSave">Save record</button></div>
+  </div>
+</div>
+<div id="printRoot"></div>
+<script>
+/* =============== CORE =============== */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+function toast(msg){const t=$('#toast');$('#toastMsg').textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+const svg=(k,cls='')=>`<svg class="${cls}"><use href="#ic-${k}"/></svg>`;
+const fmt$=n=>n||n===0?'$'+Math.round(n).toLocaleString():'—';
+const fmtDate=d=>{if(!d)return '';const x=new Date(d);return isNaN(x)?d:x.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
+function parseD(v){if(!v)return null;const d=new Date(v);return isNaN(d)?null:d;}
+
+/* =============== INDEXEDDB PHOTO STORE + OBJECT URL CACHE =============== */
+const PhotoStore = (() => {
+  const DB_NAME = 'encs_photos_v1', STORE = 'blobs';
+  let dbPromise = null;
+  const urlCache = new Map();
+
+  function open() {
+    if (!dbPromise) {
+      dbPromise = new Promise((resolve) => {
+        if (!window.indexedDB) return resolve(null);
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+      });
+    }
+    return dbPromise;
+  }
+
+  async function save(id, blob) {
+    if (urlCache.has(id)) URL.revokeObjectURL(urlCache.get(id));
+    urlCache.set(id, URL.createObjectURL(blob));
+    const db = await open();
+    if (!db) return;
+    return new Promise((res) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(blob, id);
+      tx.oncomplete = () => res(true);
+      tx.onerror = () => res(false);
+    });
+  }
+
+  async function getURL(id) {
+    if (!id) return '';
+    if (id.startsWith('data:') || id.startsWith('blob:')) return id;
+    if (urlCache.has(id)) return urlCache.get(id);
+    const db = await open();
+    if (!db) return '';
+    return new Promise((res) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(id);
+      req.onsuccess = () => {
+        if (req.result) {
+          const u = URL.createObjectURL(req.result);
+          urlCache.set(id, u);
+          res(u);
+        } else res('');
+      };
+      req.onerror = () => res('');
+    });
+  }
+
+  async function remove(id) {
+    if (!id) return;
+    if (urlCache.has(id)) {
+      URL.revokeObjectURL(urlCache.get(id));
+      urlCache.delete(id);
+    }
+    const db = await open();
+    if (!db) return;
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+  }
+
+  async function clearAll() {
+    urlCache.forEach(u => URL.revokeObjectURL(u));
+    urlCache.clear();
+    const db = await open();
+    if (!db) return;
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).clear();
+  }
+
+  return { save, getURL, remove, clearAll };
+})();
+
+function downscaleToBlob(file, maxEdge=1280, q=0.72) {
+  return new Promise(res => {
+    const srcUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const sc = Math.min(1, maxEdge / Math.max(w, h));
+      const cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
+      const cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch;
+      cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+      URL.revokeObjectURL(srcUrl);
+      cv.toBlob(blob => res(blob || file), 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(srcUrl); res(file); };
+    img.src = srcUrl;
+  });
+}
+
+/* ---- dropdown lists (from CRM 'Lists' sheet) ---- */
+const LISTS={
+ icpCat:['Commercial/Industrial','Healthcare/Dental','Education/Non-Profit','Hospitality/Multi-Unit','Franchise/Multi-Location'],
+ prospectType:['CCTV','Access Control','Intrusion','Fire'],
+ serviceType:['Access Control','CCTV','Fire','Burglar'],
+ contactType:['Call','Email','Site Walk','Referral','Other'],
+ trigger:['Failed Inspection','Insurance Requirement','New Construction','New Business Opening','Facilities Manager Hire','Referral','Other'],
+ process:['Site Walk','Site Map','Quote','In Review','Sent to Customer'],
+ status:['Open','Won','Lost'],
+ lostReason:['Price','Competitor','Timing','No Budget','Went Dark','Project Cancelled','Other'],
+ referralType:['Insurance Agent/Broker','General Contractor','Electrical Contractor','Fire Marshal/AHJ','Property Manager/CRE Broker','Existing Customer','Other'],
+ icpTier:['Bullseye','Strong','Weak'],
+ touchType:['New Prospect','Pipeline'],
+ activityType:['Call','Email','Site Walk','Text','Referral','Other'],
+ cities:['Fayetteville','Kinston','Jacksonville','Wilmington']
+};
+
+/* =============== CHECKLIST SCHEMA =============== */
+const SITE=[
+ {t:'Site Details',f:[
+  {k:'site_date',l:'Date of Walk',t:'date'},{k:'site_rep',l:'Sales Rep',t:'text'},
+  {k:'site_btype',l:'Building Type / Occupancy',t:'text'},
+  {k:'site_sqft',l:'Square Footage',t:'num'},{k:'site_floors',l:'Floors',t:'num'}
+ ]},
+ {t:'Site Photos',f:[
+  {k:'site_photos',l:'Exterior, panels, problem areas',t:'photos',hint:'tap to shoot or attach'}
+ ]}
+];
+const propNotes=(p,plats)=>[
+ {k:p+'_projtype',l:'Project Type',t:'radio',o:['New Install','Retrofit / Upgrade','Takeover']},
+ {k:p+'_platform',l:'Recommended Platform',t:'sel',o:plats,req:1},
+ {k:p+'_budget',l:'Budget range discussed',t:'text',req:1,hint:'e.g. $8K–$15K'},
+ {k:p+'_timeline',l:'Estimated install timeline',t:'text',req:1},
+ {k:p+'_competing',l:'Competing bids expected from',t:'text',hint:'blank = none noted'},
+ {k:p+'_dmpresent',l:'Decision maker present at walk?',t:'toggle'},
+ {k:p+'_next',l:'Next step / follow-up date',t:'text'},
+ {k:p+'_notes',l:'Notes',t:'area'}
+];
+const SCHEMA={
+ fire:{name:'Fire Alarm',icon:'fire',plats:['Edwards EST','Fire-Lite by Honeywell','Other'],
+  count:{type:'sum',keys:['fire_nSmoke','fire_nHeat','fire_nDuct','fire_nPull','fire_nHS'],unit:'devices'},
+  sections:[
+   {t:'B · Existing System Assessment',f:[
+    {k:'fire_exist',l:'Existing fire alarm system?',t:'toggle'},
+    {k:'fire_type',l:'System type',t:'sel',o:['Addressable','Conventional','Hybrid','Unknown']},
+    {k:'fire_panelmfr',l:'Panel Manufacturer',t:'text'},{k:'fire_model',l:'Model #',t:'text'},
+    {k:'fire_age',l:'Panel Age (approx)',t:'text'},{k:'fire_lastinsp',l:'Last Inspection Date',t:'date'},
+    {k:'fire_inspresult',l:'Inspection Result',t:'sel',o:['','Passed','Failed','Deficiencies noted']},
+    {k:'fire_inspco',l:'Inspecting Company',t:'text'},
+    {k:'fire_violations',l:'Outstanding violations / deficiencies',t:'area',hint:'pain signal'},
+    {k:'fire_asbuilt',l:'As-built drawings available?',t:'toggle'}
+   ]},
+   {t:'C · Building Survey',f:[
+    {k:'fire_occ',l:'Occupancy classification',t:'sel',o:['A-Assembly','B-Business','E-Education','I-Institutional','M-Mercantile','R-Residential','S-Storage','Other']},
+    {k:'fire_zones',l:'Number of zones / floors',t:'num'},
+    {k:'fire_sprinkler',l:'Sprinkler system present?',t:'toggle'},
+    {k:'fire_ahu',l:'# HVAC / air-handling units (duct detectors)',t:'num'},
+    {k:'fire_hood',l:'Kitchen hood suppression tie-in?',t:'toggle'},
+    {k:'fire_elev',l:'Elevator(s) requiring recall?',t:'toggle'},{k:'fire_nelev',l:'# of Elevators',t:'num'},
+    {k:'fire_generator',l:'Generator on-site?',t:'toggle'},
+    {k:'fire_hazard',l:'Special hazard areas (server, chemical, clean room)',t:'text'}
+   ]},
+   {t:'D · Detection Devices — Counts',f:[
+    {k:'fire_nSmoke',l:'Smoke Detectors — count',t:'num'},
+    {k:'fire_smoketype',l:'Smoke type',t:'multi',o:['Ionization','Photoelectric','Beam','VESDA/Aspirating']},
+    {k:'fire_nHeat',l:'Heat Detectors — count',t:'num'},
+    {k:'fire_heattype',l:'Heat type',t:'multi',o:['Fixed','Rate-of-Rise','Combination']},
+    {k:'fire_nDuct',l:'Duct Smoke Detectors — count',t:'num'},
+    {k:'fire_nPull',l:'Manual Pull Stations — count',t:'num'},
+    {k:'fire_co',l:'CO detectors required?',t:'toggle'}
+   ]},
+   {t:'E · Notification Devices',f:[
+    {k:'fire_nHS',l:'Horn / Strobe combos — count',t:'num'},
+    {k:'fire_ada',l:'ADA-compliant wall strobes required?',t:'toggle'},
+    {k:'fire_voice',l:'Mass notification / voice evac required?',t:'toggle'},
+    {k:'fire_ffphone',l:'Firefighter telephone system required?',t:'toggle'},
+    {k:'fire_annun',l:'Annunciator panel location',t:'text'}
+   ]},
+   {t:'F · Monitoring & Compliance',f:[
+    {k:'fire_mon',l:'Monitoring required?',t:'toggle'},{k:'fire_ul',l:'UL listing required?',t:'toggle'},
+    {k:'fire_monco',l:'Existing monitoring company',t:'text'},
+    {k:'fire_contractexp',l:'Monitoring contract expiration',t:'date'},
+    {k:'fire_insdriving',l:'Insurance requirement driving project?',t:'toggle'},
+    {k:'fire_nfpa',l:'NFPA 72 compliance required?',t:'toggle'},
+    {k:'fire_ahj',l:'Local AHJ (Authority Having Jurisdiction)',t:'text'},
+    {k:'fire_permit',l:'Permit required?',t:'toggle'},{k:'fire_permitmuni',l:'Permit municipality',t:'text'}
+   ]},
+   {t:'G · Infrastructure & Installation',f:[
+    {k:'fire_panelloc',l:'Proposed panel location',t:'text'},
+    {k:'fire_ceiling',l:'Ceiling type',t:'sel',o:['Drop/T-bar','Drywall','Concrete','Open/Exposed','Other']},
+    {k:'fire_wirepath',l:'Wire path accessibility',t:'multi',o:['Open ceiling','Finished walls','Conduit available','Mixed']},
+    {k:'fire_acpower',l:'Primary AC power at panel location?',t:'toggle'},
+    {k:'fire_ceilht',l:'Ceiling height avg (ft)',t:'num'}
+   ]},
+   {t:'H · Proposal Notes & Next Steps',f:propNotes('fire',['Edwards EST','Fire-Lite by Honeywell','Other'])}
+  ]},
+ cctv:{name:'CCTV',icon:'cctv',plats:['Eagle Eye Cloud','Alarm.com Cloud','Hanwha NVR On-Prem','Hybrid'],
+  count:{type:'table',key:'cctv_cameras',unit:'cameras'},
+  sections:[
+   {t:'B · Platform Decision',pd:[
+    {name:'Eagle Eye Networks (Cloud)',crit:['Internet upload ≥1–2 Mbps per camera','No on-site NVR/server to maintain','Multiple locations, one dashboard','Monthly subscription acceptable','Remote + mobile viewing required']},
+    {name:'Hanwha NVR (On-Prem)',crit:['Prefers one-time hardware purchase','Internet unreliable/unavailable','Data privacy — no cloud storage','IT staff to manage on-site NVR','Single site, no multi-location need']},
+    {name:'Alarm.com (Cloud — Unified)',crit:['Already using Alarm.com (intrusion/access)','Smaller count (1–32 cameras)','One app for alarm + cameras + access','Z-Wave / smart building integration','Monthly recurring revenue preferred']}
+   ]},
+   {t:'C · Camera Survey by Area',table:{key:'cctv_cameras',cols:[
+    {k:'loc',l:'Location / Area',t:'text'},{k:'io',l:'In/Out',t:'sel',o:['Indoor','Outdoor']},
+    {k:'type',l:'Type',t:'sel',o:['Bullet','Dome','Turret','PTZ','Fisheye']},
+    {k:'res',l:'Res',t:'sel',o:['4MP','8MP','12MP']},
+    {k:'ir',l:'IR?',t:'sel',o:['Yes','No']},{k:'irrange',l:'IR Range (ft)',t:'num'},
+    {k:'wdr',l:'WDR?',t:'sel',o:['Yes','No']},
+    {k:'audio',l:'Audio? (NC: signage req.)',t:'sel',o:['Yes','No']},
+    {k:'vandal',l:'Vandal-Resistant?',t:'sel',o:['Yes','No']},
+    {k:'mount',l:'Mounting Surface',t:'sel',o:['Wall','Ceiling','Pole','Parapet','Junction box','Pendant']},
+    {k:'material',l:'Wall / Ceiling Material',t:'sel',o:['Drywall','Concrete / CMU','Drop ceiling','Metal','Other']},
+    {k:'ceilht',l:'Ceiling Height (ft)',t:'num'},
+    {k:'run',l:'Cable Run (ft)',t:'num'},
+    {k:'conduit',l:'Existing Conduit?',t:'sel',o:['Yes','No']},
+    {k:'poe',l:'PoE Switch Available?',t:'sel',o:['Yes','No']},
+    {k:'special',l:'Special Needs',t:'text'}
+   ]}},
+   {t:'D · Network & Storage',f:[
+    {k:'cctv_isp',l:'Internet provider / upload speed',t:'text'},
+    {k:'cctv_itmgr',l:'Who manages IT / network',t:'text'},
+    {k:'cctv_vlan',l:'Dedicated VLAN for cameras available?',t:'toggle'},
+    {k:'cctv_retention',l:'Storage retention (days)',t:'num'},
+    {k:'cctv_compretention',l:'Compliance retention (HIPAA/legal, days)',t:'num'},
+    {k:'cctv_nvrloc',l:'NVR location (if on-prem)',t:'text'},
+    {k:'cctv_users',l:'Concurrent / mobile users',t:'num'}
+   ]},
+   {t:'E · Integrations & Analytics',f:[
+    {k:'cctv_acint',l:'Access control integration?',t:'toggle'},
+    {k:'cctv_intint',l:'Intrusion (alarm-triggered recording)?',t:'toggle'},
+    {k:'cctv_analytics',l:'Video analytics needed',t:'multi',o:['Motion detection','Line crossing','Loitering','Crowd detection','Facial recognition','LPR']},
+    {k:'cctv_hipaa',l:'HIPAA / compliance requirements for footage?',t:'toggle'}
+   ]},
+   {t:'F · Proposal Notes & Next Steps',f:propNotes('cctv',['Eagle Eye Cloud','Alarm.com Cloud','Hanwha NVR On-Prem','Hybrid'])}
+  ]},
+ access:{name:'Access Control',icon:'access',plats:['Brivo (Cloud)','Alarm.com (Cloud)','S2 (On-Prem)','Galaxy (On-Prem)','Other'],
+  count:{type:'table',key:'access_doors',unit:'doors'},
+  sections:[
+   {t:'B · Platform Decision',pd:[
+    {name:'Brivo (Cloud)',crit:['Internet stable on-site (~500 Kbps/door)','Managing multiple locations, one portal','Open to monthly SaaS subscription','No desire to manage on-site server','Mobile app / remote management required']},
+    {name:'Alarm.com (Cloud)',crit:['Already using Alarm.com (intrusion/CCTV)','Wants unified app — alarm+access+cameras','Smaller door count (1–50 doors)','Z-Wave smart lock integration needed','Monthly recurring revenue preferred']},
+    {name:'S2 (On-Prem)',crit:['Server / IT infrastructure on-site','IT staff to maintain system','Data privacy / no-cloud policy','Prefers one-time purchase vs monthly','Single site with sensitive data']},
+    {name:'Galaxy (On-Prem / Hybrid)',crit:['Large enterprise / campus environment','High door count, scalable architecture','Existing Galaxy infrastructure to expand','Intrusion + access on one platform','Biometric / multi-tech readers needed']}
+   ]},
+   {t:'C · Door-by-Door Survey',table:{key:'access_doors',cols:[
+    {k:'loc',l:'Location / Description',t:'text'},
+    {k:'frame',l:'Frame',t:'sel',o:['Wood','Hollow Metal','Aluminum']},
+    {k:'dtype',l:'Door Type',t:'sel',o:['Single','Double','Slide']},
+    {k:'lock',l:'Current Lock',t:'text'},
+    {k:'hw',l:'Hardware',t:'sel',o:['Electric Strike','Mag Lock','Electric Latch']},
+    {k:'rex',l:'REX Device?',t:'sel',o:['Yes','No']},
+    {k:'dps',l:'Door Position Switch?',t:'sel',o:['Yes','No']},
+    {k:'outdoor',l:'Outdoor Reader?',t:'sel',o:['Yes','No']},
+    {k:'vandal',l:'Vandal-Resistant Reader?',t:'sel',o:['Yes','No']},
+    {k:'rdr',l:'Reader Type',t:'sel',o:['Keypad only','Card only','Card + PIN','Mobile (phone)','Biometric','Multi-tech']},
+    {k:'notes',l:'Notes',t:'area'}
+   ]}},
+   {t:'D · Credentials & Users',f:[
+    {k:'access_users',l:'Total credential holders (users)',t:'num'},
+    {k:'access_credformat',l:'Credential format',t:'multi',o:['Key fob','Prox card','Smart card','Mobile app','Biometric fingerprint','Biometric facial']},
+    {k:'access_levels',l:'# access levels / groups',t:'num'},
+    {k:'access_schedules',l:'Time schedules (after-hours, weekends)',t:'text'},
+    {k:'access_visitor',l:'Visitor management required?',t:'toggle'},
+    {k:'access_lockdown',l:'Global lockdown required?',t:'toggle'},
+    {k:'access_lockdown_act',l:'How is lockdown activated?',t:'multi',o:['Push button','Reader (credential)','Code (keypad)','Other'],showIf:'access_lockdown'},
+    {k:'access_lockdown_loc',l:'Lockdown activation location(s)',t:'text',hint:'button, reader or keypad location',showIf:'access_lockdown'}
+   ]},
+   {t:'E · Special Requirements & Integrations',f:[
+    {k:'access_elevator',l:'Elevator control needed?',t:'toggle'},{k:'access_floors',l:'# floors to control',t:'num'},
+    {k:'access_gate',l:'Parking / gate access needed?',t:'toggle'},
+    {k:'access_turnstile',l:'Turnstile or mantrap needed?',t:'toggle'},
+    {k:'access_cctvint',l:'Integration with CCTV?',t:'toggle'},
+    {k:'access_fireint',l:'Fire alarm integration (fail-safe/secure)?',t:'toggle'},
+    {k:'access_intint',l:'Intrusion disarm on credential?',t:'toggle'},
+    {k:'access_audit',l:'Audit trail / reporting requirements',t:'text'}
+   ]},
+   {t:'F · Infrastructure & Power',f:[
+    {k:'access_panelloc',l:'Controller / panel location',t:'text'},
+    {k:'access_power',l:'Power available at each door?',t:'toggle'},
+    {k:'access_poe',l:'PoE network drops at doors?',t:'toggle'},
+    {k:'access_ups',l:'Battery backup / UPS required?',t:'toggle'},
+    {k:'access_wiring',l:'Wiring accessibility',t:'multi',o:['Open ceiling','Finished walls','Conduit available','Mixed']},
+    {k:'access_itmgr',l:'Who manages IT / network on-site',t:'text'}
+   ]},
+   {t:'G · Proposal Notes & Next Steps',f:propNotes('access',['Brivo (Cloud)','Alarm.com (Cloud)','S2 (On-Prem)','Galaxy (On-Prem)','Other'])}
+  ]},
+ burglar:{name:'Burglar / Intrusion',icon:'burglar',plats:['Alarm.com','Other'],
+  count:{type:'sum',keys:['burg_zones','burg_motions','burg_contacts','burg_keypads'],unit:'zones/devices'},
+  sections:[
+   {t:'B · Existing System Assessment',f:[
+    {k:'burg_exist',l:'Existing burglar alarm on-site?',t:'toggle'},
+    {k:'burg_panelmfr',l:'Panel Manufacturer',t:'text'},{k:'burg_model',l:'Model #',t:'text'},
+    {k:'burg_age',l:'Panel age (approx)',t:'text'},{k:'burg_lastsvc',l:'Last service date',t:'date'},
+    {k:'burg_exzones',l:'# existing zones',t:'num'},
+    {k:'burg_monco',l:'Existing monitoring company',t:'text'},
+    {k:'burg_contractexp',l:'Monitoring contract expiration',t:'date'},
+    {k:'burg_monmethod',l:'Current monitoring method',t:'sel',o:['Phone line (POTS)','Cellular','Broadband/IP','Unknown']},
+    {k:'burg_cellsignal',l:'Cellular signal strength at panel',t:'sel',o:['','Strong','Moderate','Weak','None']}
+   ]},
+   {t:'C · Protection Requirements',f:[
+    {k:'burg_extdoors',l:'Total exterior doors',t:'num'},{k:'burg_windows',l:'Total windows',t:'num'},
+    {k:'burg_dock',l:'Loading dock / overhead doors',t:'num'},
+    {k:'burg_glassbreak',l:'Glass break detection needed?',t:'toggle'},
+    {k:'burg_motion',l:'Interior motion detection needed?',t:'toggle'},
+    {k:'burg_motiontype',l:'Motion type',t:'multi',o:['Standard PIR','Dual-tech (PIR+MW)','Pet-immune','Ceiling-mount']},
+    {k:'burg_highvalue',l:'High-value protection',t:'multi',o:['Safe / vault','Server / IT closet','Cash drawer / register','Pharmaceutical / controlled','Duress / panic buttons']},
+    {k:'burg_env',l:'Environmental sensors',t:'multi',o:['Water / flood','Freeze / temp','CO detector','Power loss alert']}
+   ]},
+   {t:'D · System Design & Installation',f:[
+    {k:'burg_panelloc',l:'Proposed panel location',t:'text'},
+    {k:'burg_keypadloc',l:'Keypad locations',t:'text'},
+    {k:'burg_keypadtype',l:'Keypad type',t:'sel',o:['Touchscreen','Standard','Remote app']},
+    {k:'burg_app',l:'Remote access / app control required?',t:'toggle'},
+    {k:'burg_ceiling',l:'Ceiling type',t:'sel',o:['Drop/T-bar','Drywall','Concrete','Open/Exposed']},
+    {k:'burg_acpower',l:'AC power at panel location?',t:'toggle'}
+   ]},
+   {t:'E · Platform & Monitoring',pd:[
+    {name:'Alarm.com',crit:['Interactive services — remote arm/disarm','Geo-fencing / auto arm-disarm','Z-Wave device integration (locks/lights)','Crash & smash protection','Already using Alarm.com (access/CCTV)']}
+   ],f:[
+    {k:'burg_appusers',l:'Alarm.com app user count',t:'num'},
+    {k:'burg_rmr',l:'Monthly RMR plan',t:'sel',o:['Basic','Standard','Expanded']},
+    {k:'burg_chekt',l:'Chekt video verification selected?',t:'toggle',hint:'reduces false dispatch'},
+    {k:'burg_monplan',l:'Monitoring plan',t:'sel',o:['Chekt video verification','Standard central station','Self-monitoring (app)']},
+    {k:'burg_falsehist',l:'False alarm history at location',t:'area',hint:'pain signal'},
+    {k:'burg_insdiscount',l:'Insurance discount for monitored alarm?',t:'toggle'}
+   ]},
+   {t:'F · Network & Communications',f:[
+    {k:'burg_broadband',l:'Internet / broadband at panel?',t:'toggle'},
+    {k:'burg_cellbackup',l:'Cellular backup communicator required?',t:'toggle'},
+    {k:'burg_primarypath',l:'Primary communication path',t:'sel',o:['Broadband / IP','Cellular (primary)','Cellular (backup only)']},
+    {k:'burg_itcontact',l:'IT contact for network access',t:'text'}
+   ]},
+   {t:'G · Compliance & Permitting',f:[
+    {k:'burg_permit',l:'Alarm permit required?',t:'toggle'},{k:'burg_permitno',l:'Existing permit # on file',t:'text'},
+    {k:'burg_muni',l:'Municipality / jurisdiction',t:'text'},
+    {k:'burg_falseord',l:'False alarm ordinance in jurisdiction?',t:'toggle'},
+    {k:'burg_ul',l:'UL listing required by insurance?',t:'toggle'},
+    {k:'burg_carrier',l:'Insurance carrier',t:'text'}
+   ]},
+   {t:'H · Proposal Notes & Next Steps',f:[
+    {k:'burg_zones',l:'Approx zone count',t:'num'},{k:'burg_motions',l:'Motion detectors',t:'num'},
+    {k:'burg_contacts',l:'Door/window contacts',t:'num'},{k:'burg_keypads',l:'Keypads',t:'num'},
+    ...propNotes('burglar',['Alarm.com','Other'])
+   ]}
+  ]}
+};
+
+/* =============== PRE-VISIT INTEL =============== */
+const PREVISIT=[
+ {t:'Account Intel',f:[
+  {k:'pv_company',l:'Company / Business Name',t:'text',req:1},
+  {k:'pv_parent',l:'Parent Account',t:'text',hint:'multi-location? name the parent'},
+  {k:'pv_contact',l:'Contact Name',t:'text'},{k:'pv_title',l:'Title / Role',t:'text'},
+  {k:'pv_phone',l:'Phone',t:'tel'},{k:'pv_email',l:'Email',t:'email'},
+  {k:'pv_address',l:'Address / Location',t:'text'},
+  {k:'pv_city',l:'City',t:'sel',o:['',...LISTS.cities,'Other']},
+  {k:'pv_icp',l:'ICP Category',t:'sel',o:['',...LISTS.icpCat]},
+  {k:'pv_leadsource',l:'Lead Source',t:'sel',o:['Cold call / prospecting','Referral','Inbound / website','Existing customer — upsell','Job site / drive-by','Trade show / event']}
+ ]},
+ {t:'Current System Intel',f:[
+  {k:'pv_current',l:'Systems they currently have',t:'multi',o:['Fire alarm','CCTV / cameras','Access control','Burglar / intrusion','None (new install)','Unknown']},
+  {k:'pv_curbrand',l:'Current brand / provider',t:'text'},{k:'pv_sysage',l:'System age (approx)',t:'text'},
+  {k:'pv_reason',l:'Reason they are looking',t:'area',hint:'pain signal'},
+  {k:'pv_urgency',l:'Urgency signals heard on call',t:'multi',o:['Failed inspection','Insurance requirement','Break-in / incident','System not working','New location / expanding','Renewing / switching vendors']}
+ ]},
+ {t:'Decision-Maker & Deal Intel',f:[
+  {k:'pv_dm',l:'Who is the decision maker?',t:'sel',o:['','Owner / operator','Facilities manager','Regional manager','Property manager','Other']},
+  {k:'pv_dmname',l:'Decision-maker name',t:'text',hint:'the Economic Buyer'},
+  {k:'pv_dmsite',l:'DM will be at site visit?',t:'toggle'},
+  {k:'pv_budget',l:'Budget range mentioned',t:'text'},{k:'pv_timeline',l:'Timeline to buy',t:'text'},
+  {k:'pv_competing',l:'Competing bids expected from',t:'text'}
+ ]},
+ {t:'Systems to Scope This Visit',f:[
+  {k:'pv_scope',l:'Select systems to scope',t:'multi',o:['Fire alarm','CCTV','Access control','Burglar / intrusion']}
+ ]}
+];
+
+/* =============== IN-MEMORY WALK STATE (Eliminates DOM polling on keystrokes) =============== */
+function freshWalkState() {
+  return { fields: {}, pd: {}, tables: {}, photos: {} };
+}
+let walkState = freshWalkState();
+let selectedSystems = [];
+
+function syncWalkStateFromInput(inp) {
+  const tr = inp.closest('table[data-table] tbody tr');
+  if (tr) {
+    const tblKey = tr.closest('table[data-table]').dataset.table;
+    const rowIdx = [...tr.parentElement.children].indexOf(tr);
+    walkState.tables[tblKey] = walkState.tables[tblKey] || [];
+    while (walkState.tables[tblKey].length <= rowIdx) walkState.tables[tblKey].push({});
+    const col = inp.dataset.col;
+    if (col) walkState.tables[tblKey][rowIdx][col] = inp.value.trim();
+    return;
+  }
+  if (inp.dataset.pd) {
+    const s = inp.dataset.pd;
+    const arr = (walkState.pd[s] = walkState.pd[s] || []);
+    const idx = arr.findIndex(x => x.plat === inp.dataset.plat && x.crit === inp.dataset.crit);
+    if (inp.checked && idx === -1) arr.push({ plat: inp.dataset.plat, crit: inp.dataset.crit });
+    else if (!inp.checked && idx !== -1) arr.splice(idx, 1);
+    return;
+  }
+  const k = inp.dataset.fk;
+  if (!k) return;
+  if (inp.type === 'checkbox' && inp.dataset.opt != null) {
+    const arr = (walkState.fields[k] = Array.isArray(walkState.fields[k]) ? walkState.fields[k] : []);
+    const idx = arr.indexOf(inp.dataset.opt);
+    if (inp.checked && idx === -1) arr.push(inp.dataset.opt);
+    else if (!inp.checked && idx !== -1) arr.splice(idx, 1);
+    if (!arr.length) delete walkState.fields[k];
+  } else if (inp.type === 'radio') {
+    if (inp.checked) walkState.fields[k] = inp.dataset.opt;
+  } else if (inp.type === 'checkbox') {
+    if (inp.checked) walkState.fields[k] = true;
+    else delete walkState.fields[k];
+  } else {
+    const v = inp.value.trim();
+    if (v !== '') walkState.fields[k] = v;
+    else delete walkState.fields[k];
+  }
+}
+
+function getCleanWalkSnapshot() {
+  const cleanTables = {};
+  Object.entries(walkState.tables).forEach(([k, rows]) => {
+    cleanTables[k] = rows.filter(r => Object.entries(r).some(([rk, rv]) => rk !== '_photo' ? !!rv : !!rv));
+  });
+  return {
+    fields: Object.assign({}, walkState.fields),
+    pd: JSON.parse(JSON.stringify(walkState.pd)),
+    tables: cleanTables,
+    photos: JSON.parse(JSON.stringify(walkState.photos))
+  };
+}
+
+/* =============== FIELD RENDERERS =============== */
+function updateShowIf(){$$('#screen-walk [data-showif]').forEach(w=>{w.hidden=!walkState.fields[w.dataset.showif];});}
+function fInput(f){const h=fInputRaw(f);return f.showIf?`<div data-showif="${f.showIf}" hidden>${h}</div>`:h;}
+function fInputRaw(f){
+ const req=f.req?'<span class="req">*</span>':'';
+ const hint=f.hint?` <span class="hint">— ${esc(f.hint)}</span>`:'';
+ const lab=`<label>${esc(f.l)}${req}${hint}</label>`;
+ if(f.t==='area')return `<div class="field">${lab}<div class="ta-wrap"><textarea data-fk="${f.k}"></textarea><button type="button" class="mic" data-mic aria-label="Dictate">${svg('mic')}</button></div></div>`;
+ if(f.t==='sel'){const o=(f.o||[]).map(x=>`<option value="${esc(x)}">${esc(x||'— select —')}</option>`).join('');return `<div class="field">${lab}<select data-fk="${f.k}">${o}</select></div>`;}
+ if(f.t==='multi'){const o=(f.o||[]).map(x=>`<label class="chip"><input type="checkbox" data-fk="${f.k}" data-opt="${esc(x)}"><span class="bx">${svg('check')}</span><span>${esc(x)}</span><span class="chip-bg"></span></label>`).join('');return `<div class="field">${lab}<div class="chips">${o}</div></div>`;}
+ if(f.t==='radio'){const o=(f.o||[]).map(x=>`<label class="chip radiochip"><input type="radio" name="r_${f.k}" data-fk="${f.k}" data-opt="${esc(x)}"><span class="bx">${svg('check')}</span><span>${esc(x)}</span><span class="chip-bg"></span></label>`).join('');return `<div class="field">${lab}<div class="chips">${o}</div></div>`;}
+ if(f.t==='toggle')return `<div class="field"><label class="chip" style="width:100%"><input type="checkbox" data-fk="${f.k}"><span class="bx">${svg('check')}</span><span>${esc(f.l)}${req}</span><span class="chip-bg"></span></label></div>`;
+ if(f.t==='photos')return `<div class="field">${lab}<div class="photostrip" data-photofield="${f.k}"></div><label class="btn-addphoto"><input type="file" accept="image/*" capture="environment" data-photo="strip" data-target="${f.k}" multiple hidden>${svg('camera')}Add photo</label></div>`;
+ const type=f.t==='num'?'number':f.t==='date'?'date':f.t==='email'?'email':f.t==='tel'?'tel':'text';
+ return `<div class="field">${lab}<input type="${type}" data-fk="${f.k}" ${f.t==='num'?'inputmode="numeric" min="0"':''}></div>`;
+}
+function renderFields(fs){return fs.map(fInput).join('');}
+function thumbHTML(src, photoId=''){return `<div class="thumb" data-photoid="${esc(photoId)}"><img src="${src}" alt=""><button type="button" class="thumb-x" data-thumbx>${svg('x')}</button></div>`;}
+
+function renderPlatformDecision(sysid,plats){
+ return `<div class="sub-h">Platform Decision — check qualifying criteria</div>`+plats.map(p=>`
+  <div class="field"><label style="color:var(--steel-2)">${esc(p.name)}</label><div class="chips">${
+   p.crit.map(c=>`<label class="chip"><input type="checkbox" data-pd="${sysid}" data-plat="${esc(p.name)}" data-crit="${esc(c)}"><span class="bx">${svg('check')}</span><span>${esc(c)}</span><span class="chip-bg"></span></label>`).join('')
+  }</div></div>`).join('');
+}
+function renderTable(tbl){
+ const heads=tbl.cols.map(c=>`<th>${esc(c.l)}</th>`).join('');
+ return `<div class="tbl-wrap"><table class="survey" data-table="${tbl.key}"><thead><tr><th>#</th>${heads}<th>Photo</th><th></th></tr></thead><tbody></tbody></table></div>
+  <button type="button" class="btn-addrow" data-addrow="${tbl.key}">${svg('plus')}Add row</button>`;
+}
+function tableRowHTML(tbl,idx){
+ const cells=tbl.cols.map(c=>{
+  if(c.t==='sel'){const o=['',...(c.o||[])].map(x=>`<option value="${esc(x)}">${esc(x||'—')}</option>`).join('');return `<td><select data-col="${c.k}">${o}</select></td>`;}
+  if(c.t==='area')return `<td><textarea class="cellarea" rows="1" data-col="${c.k}"></textarea></td>`;
+  return `<td><input type="${c.t==='num'?'number':'text'}" data-col="${c.k}"></td>`;
+ }).join('');
+ return `<tr><td class="rownum">${idx}</td>${cells}<td class="photocell"><label class="rowcam"><input type="file" accept="image/*" capture="environment" data-photo="row" hidden>${svg('camera')}</label><img class="rowthumb" alt="" hidden></td><td><button type="button" class="del-row" data-delrow>${svg('trash')}</button></td></tr>`;
+}
+function addTableRow(key, skipState=false){
+ const tbl=Object.values(SCHEMA).map(s=>s.sections.find(x=>x.table&&x.table.key===key)).filter(Boolean)[0]?.table;
+ if(!tbl)return;
+ const tb=$(`table[data-table="${key}"] tbody`);
+ const idx=tb.children.length+1;
+ tb.insertAdjacentHTML('beforeend',tableRowHTML(tbl,idx));
+ if(!skipState){
+  walkState.tables[key]=walkState.tables[key]||[];
+  walkState.tables[key].push({});
+ }
+}
+
+function buildWalkScreen(){
+ const s=$('#screen-walk');
+ s.innerHTML=`<div class="wrap">
+  <div class="eyebrow">Step 1 of 3 · Guided discovery</div>
+  <h1 class="page-h">Site Walk</h1>
+  <p class="page-sub">Capture the walk. Generate a proposal input summary and MEDDPICC gap check on submit.</p>
+  <div id="resumeSlot"></div>
+  <div class="acc open" data-acc="previsit">
+   <button type="button" class="acc-head" data-acctoggle>
+    <span class="ic">${svg('file')}</span><span class="ttl">Pre-Visit Intel</span>
+    <span class="cnt">always</span>${svg('chev','chev')}</button>
+   <div class="acc-body">${PREVISIT.map(sec=>`<div class="sub-h">${esc(sec.t)}</div>${renderFields(sec.f)}`).join('')}</div>
+  </div>
+  <div class="acc" data-acc="site">
+   <button type="button" class="acc-head" data-acctoggle>
+    <span class="ic">${svg('pin')}</span><span class="ttl">Site Information</span>
+    <span class="cnt">shared</span>${svg('chev','chev')}</button>
+   <div class="acc-body">${SITE.map(sec=>`<div class="sub-h">${esc(sec.t)}</div>${renderFields(sec.f)}`).join('')}</div>
+  </div>
+  <div class="sub-h" style="margin-top:20px">Systems to scope on this walk <span class="req">*</span></div>
+  <div class="sys-pick">${Object.entries(SCHEMA).map(([id,sy])=>`
+    <button type="button" class="sys-tile sys-${id}" data-sys="${id}" aria-pressed="false">
+     <span class="st-chk">${svg('check')}</span>
+     <span class="st-ic">${svg(sy.icon)}</span>
+     <span class="st-name">${esc(sy.name)}</span>
+     <span class="st-plat">${esc(sy.plats.slice(0,3).join(' · '))}</span>
+    </button>`).join('')}</div>
+  <div id="sysAccordions" style="margin-top:14px"></div>
+  <div id="liveMedd" class="livemedd"></div>
+  <button class="btn btn-primary btn-block" id="genBtn" style="margin-top:6px;margin-bottom:20px">Generate proposal summary${svg('check')}</button>
+ </div>`;
+}
+
+function renderSysAccordions(preserveExisting=false){
+ const box=$('#sysAccordions');
+ if(!selectedSystems.length){
+  box.innerHTML=`<div class="callout">${svg('cctv')}<div>Select one or more systems above to load their discovery sections.</div></div>`;
+  updateCompletion();updateLiveMedd();
+  return;
+ }
+ // Preserve existing system accordion DOM nodes when adding/removing systems so entered values aren't lost
+ const existing = {};
+ $$('.acc[data-acc^="sys_"]', box).forEach(el => { existing[el.dataset.acc.slice(4)] = el; });
+ const frag = document.createDocumentFragment();
+ selectedSystems.forEach((id, si) => {
+  if (preserveExisting && existing[id]) {
+   frag.appendChild(existing[id]);
+   return;
+  }
+  const sy = SCHEMA[id];
+  const open = si === 0 ? 'open' : '';
+  const body = sy.sections.map(sec => {
+   let inner = '';
+   if (sec.f) inner += renderFields(sec.f);
+   if (sec.pd) inner += renderPlatformDecision(id, sec.pd);
+   if (sec.table) inner += renderTable(sec.table);
+   return `<div class="sub-h">${esc(sec.t)}</div>${inner}`;
+  }).join('');
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<div class="acc ${open}" data-acc="sys_${id}">
+    <button type="button" class="acc-head" data-acctoggle>
+     <span class="ic">${svg(sy.icon)}</span><span class="ttl">${esc(sy.name)}</span>
+     <span class="cnt">${sy.sections.length} sections</span>${svg('chev','chev')}</button>
+    <div class="acc-body">${body}</div></div>`;
+  const accEl = wrap.firstElementChild;
+  frag.appendChild(accEl);
+  sy.sections.forEach(sec => {
+   if (sec.table) {
+    const tb = accEl.querySelector(`table[data-table="${sec.table.key}"] tbody`);
+    if (tb) {
+     tb.insertAdjacentHTML('beforeend', tableRowHTML(sec.table, 1));
+     walkState.tables[sec.table.key] = walkState.tables[sec.table.key] || [{}];
+    }
+   }
+  });
+ });
+ box.innerHTML = '';
+ box.appendChild(frag);
+ updateShowIf();updateCompletion();updateLiveMedd();
+}
+
+const G=(d,k)=>{const v=d.fields[k];return v==null?'':v;};
+const has=(d,k)=>{const v=d.fields[k];return v!=null&&v!==''&&v!==false&&!(Array.isArray(v)&&!v.length);};
+function sysCount(d,id){
+ const c=SCHEMA[id].count;
+ if(c.type==='table')return (d.tables[c.key]||[]).filter(r=>Object.values(r).some(Boolean)).length;
+ return c.keys.reduce((a,k)=>a+(parseInt(d.fields[k])||0),0);
+}
+function firstWord(s){return String(s||'').toLowerCase().replace(/[^a-z]/g,' ').trim().split(' ')[0];}
+function platReason(d,id){
+ const plat=G(d,id+'_platform');const pw=firstWord(plat);
+ const list=(d.pd[id]||[]);
+ let match=list.filter(x=>firstWord(x.plat)===pw).map(x=>x.crit);
+ if(!match.length)match=list.map(x=>x.crit);
+ return match;
+}
+
+/* =============== VIEW 2 · PROPOSAL SUMMARY =============== */
+let lastWalk=null;
+function buildSummary(){
+ const d=lastWalk;const s=$('#screen-summary');
+ if(!d||!selectedSystems.length){s.innerHTML=`<div class="wrap"><div class="empty">${svg('file')}<div class="et">No walk submitted yet</div><div>Complete the Site Walk form and generate.</div></div></div>`;return;}
+ const client=G(d,'pv_company')||'Unnamed account';
+ const biz=G(d,'pv_company')||'—';
+ const addr=G(d,'pv_address')||'—';
+ const sqft=G(d,'site_sqft')?G(d,'site_sqft')+' sq ft':'—';
+ const floors=G(d,'site_floors')||'—';
+ const btype=G(d,'site_btype')||'—';
+ let cards=selectedSystems.map(id=>{
+  const sy=SCHEMA[id];
+  const plat=G(d,id+'_platform')||'— not selected —';
+  const reason=platReason(d,id);
+  const cnt=sysCount(d,id);
+  const proj=G(d,id+'_projtype')||'—';
+  const tl=G(d,id+'_timeline')||'—';const bud=G(d,id+'_budget')||'—';
+  const comp=G(d,id+'_competing')||'None noted';
+  const dm=d.fields[id+'_dmpresent']?'Yes — present at walk':'No / not confirmed';
+  const sitePhotos=((d.photos&&d.photos.site_photos)||[]).length;
+  const rowPhotos=(sy.count.type==='table')?(d.tables[sy.count.key]||[]).filter(r=>r._photo).length:0;
+  const photoN=sitePhotos+rowPhotos;
+  const rows=[
+   ['Client / Site',`${esc(biz)}<span class="why">${esc(addr)}</span>`],
+   ['Building',`${esc(btype)} · ${esc(sqft)} · ${esc(floors)} floor(s)`],
+   ['Platform',`<span class="plat">${esc(plat)}</span>${reason.length?`<span class="why">Qualified by: ${esc(reason.join('; '))}</span>`:'<span class="why">No qualifying criteria checked</span>'}`],
+   [sy.count.unit.replace(/^\w/,c=>c.toUpperCase()),`<b class="mono">${cnt}</b> ${esc(sy.count.unit)}`],
+   ['Project type',esc(proj)],
+   ['Timeline / Budget',`${esc(tl)} · ${esc(bud)}`],
+   ['Competing bids',esc(comp)],
+   ['DM at walk',esc(dm)],
+   ['Photos',`<b class="mono">${photoN}</b> attached${rowPhotos?` <span class="why">${rowPhotos} on survey rows</span>`:''}`]
+  ];
+  const txt=[`=== ${sy.name.toUpperCase()} — PROPOSAL INPUT ===`,
+   `Client: ${biz}`,`Site: ${addr}`,`Building: ${btype} | ${sqft} | ${floors} floors`,
+   `Recommended platform: ${plat}`,`Qualified by: ${reason.join('; ')||'—'}`,
+   `${sy.count.unit}: ${cnt}`,`Project type: ${proj}`,
+   `Timeline: ${tl}`,`Budget: ${bud}`,`Competing bids: ${comp}`,`Decision maker present: ${dm}`,`Photos attached: ${photoN}`,
+   G(d,id+'_notes')?`Notes: ${G(d,id+'_notes')}`:''].filter(Boolean).join('\n');
+  return `<div class="prop-card">
+    <div class="prop-head"><span class="ph-ic">${svg(sy.icon)}</span><span class="ph-t">${esc(sy.name)}</span></div>
+    <div class="prop-body">${rows.map(r=>`<div class="prow"><span class="pl">${esc(r[0])}</span><span class="pv">${r[1]}</span></div>`).join('')}</div>
+    <div class="copy-bar"><button class="btn btn-ghost btn-block btn-sm" data-copy="${encodeURIComponent(txt)}">${svg('copy')}Copy to clipboard</button></div>
+  </div>`;
+ }).join('');
+ s.innerHTML=`<div class="wrap">
+   <div class="eyebrow">Step 2 of 3 · ${esc(client)}</div>
+   <h1 class="page-h">Proposal Input Summary</h1>
+   <p class="page-sub">Read-only. Copy any card straight into your proposal template.</p>
+   ${cards}
+   <button class="btn btn-primary btn-block" id="sharePdf" style="margin:4px 0 8px">${svg('file')}Email / share PDF (with photos)</button>
+   <button class="btn btn-ghost btn-block" id="dlPdf" style="margin:0 0 8px">${svg('file')}Download PDF</button>
+   <button class="btn btn-ghost btn-block btn-sm" id="printProposal" style="margin:0 0 8px">Print</button>
+   <button class="btn btn-steel btn-block" id="toGap" style="margin:0 0 18px">Run MEDDPICC gap check${svg('check')}</button>
+  </div>`;
+}
+
+/* =============== PRINTABLE PROPOSAL SHEET (Resolves IndexedDB ObjectURLs) =============== */
+async function psTable(id){
+ const d=lastWalk,c=SCHEMA[id].count;
+ const tbl=SCHEMA[id].sections.find(s=>s.table&&s.table.key===c.key)?.table;
+ if(!tbl)return '';
+ const rows=(d.tables[c.key]||[]);if(!rows.length)return '<div class="ps-note">No survey rows captured.</div>';
+ const heads=tbl.cols.map(col=>`<th>${esc(col.l)}</th>`).join('')+'<th>Photo</th>';
+ const bodyArr=await Promise.all(rows.map(async (r,i)=>{
+  const cells=tbl.cols.map(col=>`<td>${esc(r[col.k]||'')}</td>`).join('');
+  const phUrl=r._photo?await PhotoStore.getURL(r._photo):'';
+  const ph=phUrl?`<img src="${phUrl}">`:'';
+  return `<tr><td>${i+1}</td>${cells}<td>${ph}</td></tr>`;
+ }));
+ return `<table class="ps-tbl"><thead><tr><th>#</th>${heads}</tr></thead><tbody>${bodyArr.join('')}</tbody></table>`;
+}
+function psDevices(id){
+ const d=lastWalk;
+ const map={fire:[['Smoke','fire_nSmoke'],['Heat','fire_nHeat'],['Duct','fire_nDuct'],['Pull','fire_nPull'],['Horn/Strobe','fire_nHS']],
+  burglar:[['Zones','burg_zones'],['Motions','burg_motions'],['Door/Window','burg_contacts'],['Keypads','burg_keypads']]};
+ const spec=map[id];if(!spec)return '';
+ return `<table class="ps-tbl"><thead><tr>${spec.map(x=>`<th>${x[0]}</th>`).join('')}</tr></thead><tbody><tr>${spec.map(x=>`<td>${esc(G(d,x[1])||'0')}</td>`).join('')}</tr></tbody></table>`;
+}
+async function buildPrintSheet(){
+ const d=lastWalk;
+ if(!d||!selectedSystems.length){toast('Generate a summary first');return false;}
+ const g=k=>esc(G(d,k)||'—');
+ const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+ const kv=(l,v)=>`<div class="ps-kv"><b>${l}</b><span>${v}</span></div>`;
+ const budget=G(d,'pv_budget')||selectedSystems.map(id=>G(d,id+'_budget')).find(Boolean)||'—';
+ const timeline=G(d,'pv_timeline')||selectedSystems.map(id=>G(d,id+'_timeline')).find(Boolean)||'—';
+ const competing=G(d,'pv_competing')||selectedSystems.map(id=>G(d,id+'_competing')).find(Boolean)||'None noted';
+ const reason=G(d,'pv_reason');
+ const gaps=evalMeddpicc(d).filter(r=>!r.ok).map(r=>r.el);
+ const sitePhotoIds=(d.photos&&d.photos.site_photos)||[];
+ const sitePhotoUrls=(await Promise.all(sitePhotoIds.map(id=>PhotoStore.getURL(id)))).filter(Boolean);
+
+ const sysArr=await Promise.all(selectedSystems.map(async id=>{
+  const sy=SCHEMA[id];
+  const plat=G(d,id+'_platform')||'— not selected —';
+  const rz=platReason(d,id).join('; ')||'none checked';
+  const notes=G(d,id+'_notes');
+  const tblHtml=sy.count.type==='table'?await psTable(id):psDevices(id);
+  return `<div class="ps-sec">
+    <div class="ps-sec-h">${esc(sy.name)}</div>
+    <div class="ps-plat"><b>Recommended platform: ${esc(plat)}</b><br>Qualified by: ${esc(rz)}</div>
+    <div class="ps-grid">
+     ${kv('Count',sysCount(d,id)+' '+sy.count.unit)}${kv('Project type',esc(G(d,id+'_projtype')||'—'))}
+     ${kv('Timeline',esc(G(d,id+'_timeline')||timeline))}${kv('Budget',esc(G(d,id+'_budget')||budget))}
+    </div>
+    ${tblHtml}
+    ${notes?`<div class="ps-note"><b>Notes:</b> ${esc(notes)}</div>`:''}
+  </div>`;
+ }));
+
+ const gal=sitePhotoUrls.length?`<div class="ps-sec"><div class="ps-sec-h">Site Photos</div><div class="ps-gal">${sitePhotoUrls.map((u,i)=>`<figure><img src="${u}"><figcaption>Site photo ${i+1}</figcaption></figure>`).join('')}</div></div>`:'';
+ $('#printRoot').innerHTML=`
+  <div class="ps-hd">
+    <div class="ps-brand">Eastern NC Security Solutions<small>Site-Walk Proposal Input</small></div>
+    <div class="ps-meta">Generated ${today}<br>${selectedSystems.map(id=>esc(SCHEMA[id].name)).join(' · ')}</div>
+  </div>
+  <div class="ps-co">${g('pv_company')}</div>
+  <div class="ps-grid">
+   ${kv('Address',g('pv_address'))}${kv('City',g('pv_city'))}
+   ${kv('Contact',g('pv_contact')+(G(d,'pv_title')?' — '+g('pv_title'):''))}${kv('Phone',g('pv_phone'))}
+   ${kv('Email',g('pv_email'))}${kv('ICP',g('pv_icp'))}
+   ${kv('Date of walk',g('site_date'))}${kv('Sales rep',g('site_rep'))}
+   ${kv('Building',g('site_btype'))}${kv('Size',(G(d,'site_sqft')?G(d,'site_sqft')+' sq ft':'—')+' · '+(G(d,'site_floors')||'—')+' floor(s)')}
+   ${kv('Decision maker',g('pv_dmname'))}${kv('DM at walk',selectedSystems.some(id=>d.fields[id+'_dmpresent'])||d.fields['pv_dmsite']?'Yes':'Not confirmed')}
+   ${kv('Budget',esc(budget))}${kv('Timeline',esc(timeline))}
+   ${kv('Competing bids',esc(competing))}${kv('Current vendor',g('pv_curbrand'))}
+  </div>
+  ${reason?`<div class="ps-note"><b>Reason looking / pain:</b> ${esc(reason)}</div>`:''}
+  ${gaps.length?`<div class="ps-open"><b>Open items to confirm before quoting:</b> ${esc(gaps.join(', '))}</div>`:''}
+  ${sysArr.join('')}
+  ${gal}
+  <div class="ps-ft">Eastern NC Security Solutions — compliant, secure, and stress-free, all under one roof · ${today}</div>`;
+ return true;
+}
+
+function evalMeddpicc(d){
+ const anySys=selectedSystems;
+ const budget=anySys.some(id=>has(d,id+'_budget'))||has(d,'pv_budget');
+ const countsAll0=anySys.every(id=>sysCount(d,id)===0);
+ const sqft=has(d,'site_sqft');
+ const dmId=has(d,'pv_dmname')||has(d,'pv_dm');
+ const dmPresent=d.fields['pv_dmsite']||anySys.some(id=>d.fields[id+'_dmpresent']);
+ const platSel=anySys.length&&anySys.every(id=>has(d,id+'_platform'));
+ const critChecked=Object.values(d.pd).some(a=>a.length);
+ const timeline=anySys.some(id=>has(d,id+'_timeline'))||has(d,'pv_timeline');
+ const competing=anySys.some(id=>has(d,id+'_competing'))||has(d,'pv_competing');
+ const painFields=[has(d,'fire_violations'),has(d,'pv_reason'),has(d,'pv_urgency'),has(d,'burg_falsehist'),has(d,'fire_inspresult')&&G(d,'fire_inspresult')==='Failed'];
+ const anyPain=painFields.some(Boolean);
+ const compliance=has(d,'access_audit')||d.fields['cctv_hipaa']||d.fields['fire_nfpa']||d.fields['burg_ul']||d.fields['fire_ul'];
+ const permit=d.fields['fire_permit']||d.fields['burg_permit']||has(d,'fire_permitmuni')||has(d,'burg_permitno')||has(d,'burg_muni');
+ const contractExp=has(d,'fire_contractexp')||has(d,'burg_contractexp');
+ const R=[];
+ R.push({el:'Metrics',sub:'M',ok:budget&&!countsAll0,msg:budget&&!countsAll0?`Budget captured; device/door/camera counts recorded${sqft?', square footage noted':''}.`:`Missing ${!budget?'budget range':''}${!budget&&countsAll0?' and ':''}${countsAll0?'device/door/camera counts (all zero)':''}.`});
+ R.push({el:'Economic Buyer',sub:'E',ok:dmId&&dmPresent,msg:dmId&&dmPresent?'Decision maker identified and present/confirmed at walk.':`${!dmId?'Decision maker not named':'DM named'}; ${!dmPresent?'not confirmed present at walk':'present'}.`});
+ R.push({el:'Decision Criteria',sub:'D',ok:platSel&&critChecked,msg:platSel&&critChecked?'Platform selected with qualifying criteria checked.':`${!platSel?'Platform not selected for every system':'Platform set'}; ${!critChecked?'no qualifying criteria checked':'criteria checked'}.`});
+ R.push({el:'Decision Process',sub:'D',ok:timeline&&competing,msg:timeline&&competing?'Timeline and competing-bid landscape captured.':`${!timeline?'Timeline blank':'Timeline set'}; ${!competing?'competing-bids field empty':'competition noted'}.`});
+ R.push({el:'Identify Pain',sub:'I',ok:anyPain,msg:anyPain?'Pain captured (reason looking / urgency / deficiencies).':'No pain captured — reason for looking, urgency signals, and deficiencies all blank.'});
+ R.push({el:'Champion',sub:'C',ok:false,msg:'Standing gap — confirm an internal sponsor who will advocate for you post-visit.'});
+ R.push({el:'Competition',sub:'C',ok:competing,msg:competing?'Competing bids / incumbent noted.':'Competing-bids field is empty — confirm who else is quoting.'});
+ R.push({el:'Paper Process',sub:'P',ok:compliance||permit||contractExp,msg:(compliance||permit||contractExp)?'Permit / UL / compliance / contract-expiration captured.':'No compliance boxes checked and permit field blank — confirm permitting & paperwork path.'});
+ return R;
+}
+
+function buildGap(){
+ const d=lastWalk;const s=$('#screen-gap');
+ if(!d){s.innerHTML=`<div class="wrap"><div class="empty">${svg('check')}<div class="et">Nothing to evaluate</div><div>Generate a proposal summary first.</div></div></div>`;return;}
+ const R=evalMeddpicc(d);const gaps=R.filter(r=>!r.ok).length;const captured=R.length-gaps;
+ const pct=Math.round(captured/R.length*100);
+ s.innerHTML=`<div class="wrap">
+   <div class="eyebrow">Step 3 of 3 · Qualification</div>
+   <h1 class="page-h">MEDDPICC Gap Report</h1>
+   <p class="page-sub">What the walk captured vs. what still needs a follow-up.</p>
+   <div class="gap-summary">
+     <div><div class="big">${gaps}</div><div class="lbl">Gaps flagged</div></div>
+     <div class="meter"><i style="width:${pct}%"></i></div>
+     <div style="text-align:right"><div class="big" style="color:var(--ok)">${captured}</div><div class="lbl">Captured</div></div>
+   </div>
+   ${R.map(r=>`<div class="med-row">
+     <span class="med-led ${r.ok?'ok':'gap'}"></span>
+     <div class="med-main"><div class="med-el">${esc(r.el)}<small>${esc(r.sub)}</small></div><div class="med-msg">${esc(r.msg)}</div></div>
+     <span class="med-badge ${r.ok?'ok':'gap'}">${r.ok?'Captured':'Gap'}</span>
+   </div>`).join('')}
+   <button class="btn btn-primary btn-block" id="saveWalk" style="margin:6px 0 18px">${svg('check')}Save walk</button>
+  </div>`;
+}
+
+/* =============== TRACKER =============== */
+/* ---- persistence ---- */
+const DBKEY='encs_field_console_v1';
+let DB={walks:[],settings:{}};
+const screenDirty={walks:true,admin:true};
+let editingWalkId=null;
+function markDirty(...sc){if(!sc.length)Object.keys(screenDirty).forEach(k=>screenDirty[k]=true);else sc.forEach(k=>screenDirty[k]=true);}
+function loadDB(){try{const r=localStorage.getItem(DBKEY);if(r)DB=Object.assign(DB,JSON.parse(r));}catch(e){}ensureDefaults();}
+function ensureDefaults(){
+ if(!Array.isArray(DB.walks))DB.walks=[];
+ if(!DB.settings||typeof DB.settings!=='object')DB.settings={};
+ if(!DB.settings.gdrive||typeof DB.settings.gdrive!=='object')DB.settings.gdrive={clientId:'',folder:'Field Console Backups',folderId:''};
+}
+function saveDB(){markDirty();try{localStorage.setItem(DBKEY,JSON.stringify(DB));}catch(e){toast('Storage full or unavailable');}}
+const stamp=()=>new Date().toISOString().slice(0,10);
+
+/* =============== SAVED WALKS =============== */
+let walkQ='';
+function saveWalkFromGap(){
+ const d=lastWalk;if(!d)return null;
+ const gaps=evalMeddpicc(d).filter(r=>!r.ok).length;
+ const snap=JSON.parse(JSON.stringify({fields:d.fields,pd:d.pd,tables:d.tables,photos:d.photos}));
+ const now=Date.now();
+ let w=editingWalkId?DB.walks.find(x=>x.id===editingWalkId):null;
+ if(w){w.walk=snap;w.sys=selectedSystems.slice();w.company=G(d,'pv_company');w.updated=now;w.gaps=gaps;}
+ else{w={id:uid(),created:now,updated:now,company:G(d,'pv_company'),sys:selectedSystems.slice(),gaps,walk:snap};DB.walks.push(w);}
+ saveDB();return w;
+}
+function newWalk(){
+ walkState=freshWalkState();selectedSystems=[];lastWalk=null;editingWalkId=null;walkStep=0;
+ clearDraft();buildWalkScreen();renderSysAccordions(false);buildSummary();buildGap();updateStrip();maybeShowResume();
+}
+function walkPhotoIds(w){
+ const ids=[];const k=w.walk||{};
+ Object.values(k.photos||{}).forEach(a=>(a||[]).forEach(x=>ids.push(x)));
+ Object.values(k.tables||{}).forEach(rows=>(rows||[]).forEach(r=>{if(r&&r._photo)ids.push(r._photo);}));
+ return ids;
+}
+function renderWalkList(){
+ const box=$('#walkList');if(!box)return;
+ const q=walkQ.trim().toLowerCase();
+ const list=DB.walks.slice().sort((a,b)=>b.updated-a.updated).filter(w=>!q||(w.company||'').toLowerCase().includes(q));
+ if(!list.length){box.innerHTML=`<div class="empty">${svg('file')}<div class="et">${DB.walks.length?'No matches':'No saved walks yet'}</div><div>${DB.walks.length?'Try another name.':'Finish a walk and tap Save walk on the gap report.'}</div></div>`;return;}
+ box.innerHTML=list.map(w=>{
+  const ready=!w.gaps;
+  const sy=(w.sys||[]).map(id=>SCHEMA[id]?SCHEMA[id].name:id).join(' · ');
+  const ph=walkPhotoIds(w).length;
+  return `<div class="rec">
+   <div class="rec-head"><div class="rc-t">${esc(w.company||'Unnamed account')}</div><span class="pill ${ready?'st-Won':'tier-Bullseye'}">${ready?'Ready to quote':w.gaps+' gap'+(w.gaps===1?'':'s')}</span></div>
+   <div class="rec-meta"><span class="m">${svg('clock')}${esc(fmtDate(w.updated))}</span><span class="m">${esc(sy||'—')}</span><span class="m">${svg('camera')}${ph}</span></div>
+   <div class="rec-actions">
+    <button data-walkopen="${esc(w.id)}">${svg('edit')}Open</button>
+    <button data-walkpdf="${esc(w.id)}">${svg('file')}PDF</button>
+    <button class="del" data-walkdel="${esc(w.id)}">${svg('trash')}Delete</button>
+   </div></div>`;}).join('');
+}
+function buildWalks(){
+ screenDirty.walks=false;
+ $('#screen-walks').innerHTML=`<div class="wrap">
+  <div class="eyebrow">Saved on this device</div>
+  <h1 class="page-h">Walks</h1>
+  <p class="page-sub">Reopen a walk to edit it, or send its PDF again.</p>
+  <div class="tracker-bar"><input type="text" id="walkSearch" placeholder="Search by company…" value="${esc(walkQ)}"><button class="btn btn-primary btn-sm" id="newWalk">${svg('plus')}New</button></div>
+  <div id="walkList"></div></div>`;
+ renderWalkList();
+}
+async function openWalk(id){
+ const w=DB.walks.find(x=>x.id===id);if(!w)return;
+ if(!draftIsEmpty(getCleanWalkSnapshot())&&!confirm('Replace the walk you are working on?'))return;
+ const d=JSON.parse(JSON.stringify(w.walk));d._sys=(w.sys||[]).slice();
+ await applyWalk(d);
+ editingWalkId=id;lastWalk=null;walkStep=0;showTop('walk');toast('Walk opened — edit, then Generate');
+}
+async function walkPdf(id){
+ const w=DB.walks.find(x=>x.id===id);if(!w)return;
+ const oL=lastWalk,oS=selectedSystems;
+ lastWalk=JSON.parse(JSON.stringify(w.walk));selectedSystems=Object.keys(SCHEMA).filter(k=>(w.sys||[]).includes(k));
+ try{await pdfAction(true);}finally{lastWalk=oL;selectedSystems=oS;}
+}
+function deleteWalk(id){
+ const i=DB.walks.findIndex(x=>x.id===id);if(i<0)return;
+ if(!confirm('Delete this walk and its photos? This cannot be undone.'))return;
+ walkPhotoIds(DB.walks[i]).forEach(pid=>PhotoStore.remove(pid));
+ DB.walks.splice(i,1);if(editingWalkId===id)editingWalkId=null;
+ saveDB();buildWalks();toast('Walk deleted');
+}
+
+/* =============== WALK DRAFT AUTO-SAVE + RESUME =============== */
+const DRAFTKEY='encs_walk_draft_v1';
+let draftTimer=null;
+function scheduleDraftSave(){clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,600);}
+function draftIsEmpty(w){return !w||(!Object.keys(w.fields||{}).length&&!Object.keys(w.photos||{}).length&&!Object.values(w.tables||{}).some(r=>r.length));}
+function saveDraft(){
+ if(topView!=='walk'&&!selectedSystems.length)return;
+ const w=getCleanWalkSnapshot();
+ if(draftIsEmpty(w)&&!selectedSystems.length){clearDraft();return;}
+ const payload={ts:Date.now(),sys:selectedSystems.slice(),walk:w};
+ try{localStorage.setItem(DRAFTKEY,JSON.stringify(payload));}catch(e){}
+}
+function loadDraft(){try{const r=localStorage.getItem(DRAFTKEY);return r?JSON.parse(r):null;}catch(e){return null;}}
+function clearDraft(){try{localStorage.removeItem(DRAFTKEY);}catch(e){}const s=$('#resumeSlot');if(s)s.innerHTML='';}
+function timeAgo(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<24)return h+' hr ago';return Math.round(h/24)+' d ago';}
+function maybeShowResume(){
+ const d=loadDraft();const slot=$('#resumeSlot');if(!slot)return;
+ if(!d||(draftIsEmpty(d.walk)&&!(d.sys||[]).length)){slot.innerHTML='';return;}
+ const who=(d.walk.fields&&d.walk.fields.pv_company)||'an unnamed account';
+ slot.innerHTML=`<div class="resume-banner">
+   <div class="rb-txt"><b>Unsaved walk in progress</b><span>${esc(who)} · ${timeAgo(d.ts)}</span></div>
+   <div class="rb-btns"><button type="button" class="btn btn-primary btn-sm" id="resumeBtn">Resume</button>
+   <button type="button" class="btn btn-ghost btn-sm" id="discardBtn">Discard</button></div></div>`;
+}
+async function applyWalk(d){
+ walkState = freshWalkState();
+ walkState.fields = Object.assign({}, d.fields || {});
+ walkState.pd = JSON.parse(JSON.stringify(d.pd || {}));
+ walkState.tables = JSON.parse(JSON.stringify(d.tables || {}));
+ walkState.photos = JSON.parse(JSON.stringify(d.photos || {}));
+
+ selectedSystems=Object.keys(SCHEMA).filter(k=>(d._sys||[]).includes(k));
+ $$('.sys-tile').forEach(t=>t.setAttribute('aria-pressed',selectedSystems.includes(t.dataset.sys)));
+ renderSysAccordions(false);
+
+ $$('#screen-walk [data-fk]').forEach(inp=>{
+  if(inp.closest('[data-table]'))return;
+  const k=inp.dataset.fk,v=walkState.fields[k];
+  if(inp.type==='checkbox'&&inp.dataset.opt!=null)inp.checked=Array.isArray(v)&&v.includes(inp.dataset.opt);
+  else if(inp.type==='radio')inp.checked=(v===inp.dataset.opt);
+  else if(inp.type==='checkbox')inp.checked=!!v;
+  else if(v!=null)inp.value=v;
+ });
+ $$('#screen-walk [data-pd]').forEach(inp=>{const arr=(walkState.pd[inp.dataset.pd])||[];inp.checked=arr.some(x=>x.plat===inp.dataset.plat&&x.crit===inp.dataset.crit);});
+
+ for(const [key,rows] of Object.entries(walkState.tables)){
+  const tb=$(`table[data-table="${key}"] tbody`);if(!tb)continue;tb.innerHTML='';
+  const list=rows.length?rows:[{}];
+  for(const r of list){
+   addTableRow(key,true);const tr=tb.lastElementChild;
+   $$('[data-col]',tr).forEach(c=>{if(r[c.dataset.col]!=null)c.value=r[c.dataset.col];});
+   if(r._photo){
+    const url=await PhotoStore.getURL(r._photo);
+    const img=tr.querySelector('.rowthumb');
+    if(img&&url){img.src=url;img.dataset.photoid=r._photo;img.hidden=false;tr.querySelector('.photocell').classList.add('has');}
+   }
+  }
+ }
+ for(const [fk,arr] of Object.entries(walkState.photos)){
+  const strip=$(`[data-photofield="${fk}"]`);if(!strip)continue;
+  for(const pid of arr){
+   const url=await PhotoStore.getURL(pid);
+   if(url)strip.insertAdjacentHTML('beforeend',thumbHTML(url,pid));
+  }
+ }
+ updateShowIf();updateStrip();updateCompletion();updateLiveMedd();
+}
+
+/* =============== ADMIN · BACKUP =============== */
+function download(name,text,type){
+ try{
+  const blob=new Blob([text],{type:type||'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},400);
+ }catch(e){toast('Download failed');}
+}
+function exportBackup(){download(`ENCS_FieldConsole_Backup_${stamp()}.json`,JSON.stringify(DB,null,1),'application/json');toast('Backup downloaded');}
+function restoreBackup(text){
+ let d;try{d=JSON.parse(text);}catch(e){toast('Not a valid backup file');return;}
+ if(!d||typeof d!=='object'||!Array.isArray(d.walks)){toast('Not a Field Console backup');return;}
+ if(!confirm('Restore this backup? It replaces all walks currently on this device.'))return;
+ DB=Object.assign({walks:[],settings:{}},d);ensureDefaults();saveDB();
+ buildAdmin();toast('Backup restored ('+DB.walks.length+' walks)');
+}
+function buildAdmin(){
+ screenDirty.admin=false;
+ $('#screen-admin').innerHTML=`<div class="wrap">
+  <div class="eyebrow">Backup</div>
+  <h1 class="page-h">Backup &amp; Settings</h1>
+  <p class="page-sub">Walks and photos live on this device only. Back up often. Clearing browser data wipes them.</p>
+  <div class="admin-note">Saved walks: <b>${DB.walks.length}</b>. The backup file holds walk answers, not photos. Photos stay on this device.</div>
+  <div class="eyebrow" style="margin-top:6px">Google Drive</div>
+  <div class="admin-note">One-tap backup to a Drive folder. Paste your Google OAuth Client ID once. The app creates the folder if it is missing.</div>
+  <div class="field"><label>Google OAuth Client ID</label><input type="text" id="gdClient" value="${esc(DB.settings.gdrive.clientId)}" placeholder="xxxx.apps.googleusercontent.com" autocapitalize="off" autocorrect="off"></div>
+  <div class="field"><label>Drive folder name</label><input type="text" id="gdFolder" value="${esc(DB.settings.gdrive.folder)}"></div>
+  <button class="btn btn-primary btn-block" id="gdBackup" style="margin:0 0 12px">${svg('file')}Save backup to Drive</button>
+  <button class="btn btn-steel btn-block" id="expBackup" style="margin:0 0 8px">${svg('file')}Download backup (.json)</button>
+  <div class="datarow">
+   <label class="btn btn-ghost btn-block btn-sm" for="impBackup" style="margin:0">Restore backup</label>
+   <input type="file" id="impBackup" accept=".json,application/json" hidden>
+  </div>
+  <div style="height:24px"></div></div>`;
+}
+
+/* ---- outdoor / high-contrast ---- */
+const OUTKEY='encs_outdoor';
+function applyOutdoor(on){document.body.classList.toggle('outdoor',on);$('#outdoorBtn')?.classList.toggle('on',on);}
+
+/* ---- voice dictation ---- */
+let recog=null,recogBtn=null;
+function voiceSupported(){return 'webkitSpeechRecognition' in window||'SpeechRecognition' in window;}
+function startDictation(btn){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+ const ta=btn.parentElement.querySelector('textarea');if(!ta)return;
+ if(recog){try{recog.stop();}catch(e){}const same=recogBtn===btn;recog=null;if(recogBtn)recogBtn.classList.remove('rec');recogBtn=null;if(same)return;}
+ recog=new SR();recog.lang='en-US';recog.interimResults=false;recog.continuous=true;recogBtn=btn;btn.classList.add('rec');
+ recog.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){const tx=e.results[i][0].transcript.trim();if(tx)ta.value=(ta.value?ta.value.replace(/\s*$/,'')+' ':'')+tx;}}ta.dispatchEvent(new Event('input',{bubbles:true}));};
+ recog.onerror=()=>{btn.classList.remove('rec');recog=null;recogBtn=null;};
+ recog.onend=()=>{btn.classList.remove('rec');recog=null;recogBtn=null;};
+ try{recog.start();}catch(e){btn.classList.remove('rec');recog=null;recogBtn=null;}
+}
+
+/* ---- live completion + MEDDPICC (Reads in-memory walkState directly) ---- */
+let liveTimer=null;
+function scheduleLive(){clearTimeout(liveTimer);liveTimer=setTimeout(()=>{updateCompletion();updateLiveMedd();},200);}
+function updateCompletion(){
+ $$('#screen-walk .acc').forEach(acc=>{
+  const body=acc.querySelector('.acc-body');const cnt=acc.querySelector('.cnt');if(!body||!cnt)return;
+  const a=acc.dataset.acc||'';if(!(a==='previsit'||a==='site'||a.startsWith('sys_')))return;
+  const keys={};
+  $$('[data-fk]',body).forEach(inp=>{
+   if(inp.closest('[data-table]'))return;
+   if(inp.closest('[data-showif][hidden]'))return;
+   const k=inp.dataset.fk;
+   keys[k]=keys[k]||has(walkState,k);
+  });
+  const total=Object.keys(keys).length;const done=Object.values(keys).filter(Boolean).length;
+  if(total){cnt.textContent=`${done}/${total}`;cnt.classList.toggle('done',done===total);cnt.classList.toggle('part',done>0&&done<total);}
+ });
+}
+function updateLiveMedd(){
+ const box=$('#liveMedd');if(!box)return;
+ if(!selectedSystems.length){box.innerHTML='';return;}
+ const R=evalMeddpicc(walkState);const cap=R.filter(r=>r.ok).length;
+ box.innerHTML=`<div class="lm-top"><span class="lm-ttl">MEDDPICC readiness</span><span class="lm-n">${cap}/8 captured</span></div>
+   <div class="lm-dots">${R.map(r=>`<span class="lm-dot ${r.ok?'ok':''}" title="${esc(r.el)}: ${esc(r.msg)}">${esc(r.sub)}</span>`).join('')}</div>`;
+}
+
+let topView='walk',walkStep=0;
+const WALKSCREENS=['screen-walk','screen-summary','screen-gap'];
+const TAGS={walk:['SITE WALK','SUMMARY','GAP CHECK'],walks:'SAVED WALKS',admin:'BACKUP'};
+
+function ensureScreenBuilt(v) {
+ if (v === 'walks' && screenDirty.walks) buildWalks();
+ else if (v === 'admin' && screenDirty.admin) buildAdmin();
+}
+
+function showTop(v){
+ topView=v;
+ ensureScreenBuilt(v);
+ $$('.screen').forEach(x=>x.classList.remove('active'));
+ if(v==='walk')$('#'+WALKSCREENS[walkStep]).classList.add('active');
+ else $('#screen-'+v).classList.add('active');
+ $$('.navbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+ $('#viewTag').textContent=v==='walk'?TAGS.walk[walkStep]:TAGS[v];
+ $('#stepbar').classList.toggle('show',v==='walk');
+ if(v==='walk')renderProgress();
+ window.scrollTo(0,0);
+}
+function renderProgress(){
+ $('#stepProgress').innerHTML=[0,1,2].map(i=>`<span class="pdot ${i<walkStep?'done':i===walkStep?'cur':''}"></span>`).join('');
+ $('#stepBack').style.visibility=walkStep===0?'hidden':'visible';
+ $('#stepNext').innerHTML=walkStep===2?`Done${svg('check')}`:`Next${svg('check')}`;
+}
+function goStep(n){
+ if(n===1&&walkStep===0){if(!generate())return;}
+ walkStep=Math.max(0,Math.min(2,n));
+ showTop('walk');
+}
+function generate(){
+ if(!selectedSystems.length){toast('Select at least one system');return false;}
+ lastWalk=getCleanWalkSnapshot();
+ if(!G(lastWalk,'pv_company')){toast('Enter a company name');$('[data-acc="previsit"]').classList.add('open');window.scrollTo(0,0);return false;}
+ buildSummary();buildGap();
+ return true;
+}
+function updateStrip(){
+ const acct=walkState.fields.pv_company||'No active walk';
+ $('#ssAcct').textContent=acct;
+ $$('#statusStrip .led').forEach(l=>l.classList.toggle('on',selectedSystems.includes(l.dataset.sys)));
+}
+
+
+
+/* =============== PDF (share / download) =============== */
+const HTML2PDF_URL='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+function loadScriptOnce(u){return new Promise((res,rej)=>{if(window.html2pdf)return res();const sc=document.createElement('script');sc.src=u;sc.onload=()=>res();sc.onerror=()=>rej(new Error('PDF tool needs a connection'));document.head.appendChild(sc);});}
+function pdfName(){const c=(G(lastWalk,'pv_company')||'walk').replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'');return `SiteWalk_${c}_${stamp()}.pdf`;}
+async function makePdfBlob(){
+ if(!(await buildPrintSheet()))return null;
+ await loadScriptOnce(HTML2PDF_URL);
+ const stage=document.createElement('div');stage.className='pdfstage';stage.innerHTML=$('#printRoot').innerHTML;document.body.appendChild(stage);
+ try{
+  const imgs=[...stage.querySelectorAll('img')];
+  await Promise.all(imgs.map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r;})));
+  return await html2pdf().set({margin:[10,10,12,10],filename:pdfName(),image:{type:'jpeg',quality:0.9},
+   html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'},
+   pagebreak:{mode:['css','legacy'],avoid:['.ps-sec','tr','figure']}}).from(stage).outputPdf('blob');
+ }finally{stage.remove();}
+}
+async function pdfAction(share){
+ const btns=$$('#sharePdf,#dlPdf');btns.forEach(b=>b.disabled=true);
+ try{
+  toast('Building PDF…');
+  const blob=await makePdfBlob();if(!blob)return;
+  const name=pdfName();const file=new File([blob],name,{type:'application/pdf'});
+  if(share&&navigator.canShare&&navigator.canShare({files:[file]})){
+   try{await navigator.share({files:[file],title:name,text:'Site walk — '+(G(lastWalk,'pv_company')||'')});return;}
+   catch(err){if(err&&err.name==='AbortError')return;}
+  }
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},800);
+  toast(share?'Sharing not supported here — PDF downloaded':'PDF downloaded');
+ }catch(e){toast(e.message||'PDF failed');}
+ finally{btns.forEach(b=>b.disabled=false);}
+}
+
+/* =============== GOOGLE DRIVE BACKUP =============== */
+let gdToken=null,gdExp=0;
+function gdLoadLib(){return new Promise((res,rej)=>{
+ if(window.google&&google.accounts&&google.accounts.oauth2)return res();
+ const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';
+ sc.onload=()=>res();sc.onerror=()=>rej(new Error('Could not load Google sign-in (offline?)'));document.head.appendChild(sc);});}
+async function gdAuth(){
+ const g=DB.settings.gdrive;
+ if(!g.clientId)throw new Error('Enter your Client ID first');
+ if(gdToken&&Date.now()<gdExp)return gdToken;
+ await gdLoadLib();
+ return new Promise((res,rej)=>{
+  const tc=google.accounts.oauth2.initTokenClient({client_id:g.clientId,scope:'https://www.googleapis.com/auth/drive.file',
+   callback:r=>{if(r.error)return rej(new Error(r.error));gdToken=r.access_token;gdExp=Date.now()+((+r.expires_in||3600)-60)*1000;res(gdToken);},
+   error_callback:e=>rej(new Error((e&&e.type)||'Sign-in cancelled'))});
+  tc.requestAccessToken();
+ });
+}
+async function gdApi(url,opts){
+ const t=await gdAuth();
+ const r=await fetch(url,Object.assign({},opts,{headers:Object.assign({Authorization:'Bearer '+t},(opts&&opts.headers)||{})}));
+ if(!r.ok){if(r.status===401)gdToken=null;throw new Error('Drive error '+r.status);}
+ return r.json();
+}
+async function gdFolderId(){
+ const g=DB.settings.gdrive;
+ if(g.folderId){
+  try{const f=await gdApi('https://www.googleapis.com/drive/v3/files/'+g.folderId+'?fields=id,name,trashed');
+   if(!f.trashed&&f.name===g.folder)return g.folderId;}catch(e){}
+ }
+ const nm=g.folder.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+ const q=encodeURIComponent(`name='${nm}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+ const l=await gdApi('https://www.googleapis.com/drive/v3/files?fields=files(id)&q='+q);
+ let id=l.files&&l.files[0]&&l.files[0].id;
+ if(!id){const c=await gdApi('https://www.googleapis.com/drive/v3/files?fields=id',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:g.folder,mimeType:'application/vnd.google-apps.folder'})});id=c.id;}
+ g.folderId=id;saveDB();return id;
+}
+async function gdBackup(){
+ const g=DB.settings.gdrive;
+ if(!g.clientId){toast('Enter Client ID first');return;}
+ if(!g.folder.trim()){toast('Enter a folder name');return;}
+ const btn=$('#gdBackup');if(btn)btn.disabled=true;
+ try{
+  toast('Connecting to Google…');
+  const folder=await gdFolderId();
+  const name=`ENCS_FieldConsole_Backup_${stamp()}.json`;
+  const q=encodeURIComponent(`name='${name}' and '${folder}' in parents and trashed=false`);
+  const ex=await gdApi('https://www.googleapis.com/drive/v3/files?fields=files(id)&q='+q);
+  const fid=ex.files&&ex.files[0]&&ex.files[0].id;
+  const b='encsbnd'+uid();
+  const meta=fid?{name}:{name,parents:[folder]};
+  const body=`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(DB)}\r\n--${b}--`;
+  await gdApi('https://www.googleapis.com/upload/drive/v3/files'+(fid?'/'+fid:'')+'?uploadType=multipart&fields=id',{method:fid?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body});
+  toast('Saved to Drive: '+g.folder);
+ }catch(e){toast(e.message||'Drive backup failed');}
+ finally{if(btn)btn.disabled=false;}
+}
+
+/* =============== EVENT DELEGATION =============== */
+document.addEventListener('click',async e=>{
+ const acc=e.target.closest('[data-acctoggle]');
+ if(acc){acc.closest('.acc').classList.toggle('open');return;}
+ const sys=e.target.closest('[data-sys]');
+ if(sys){
+  const id=sys.dataset.sys;const on=sys.getAttribute('aria-pressed')==='true';
+  sys.setAttribute('aria-pressed',!on);
+  if(on)selectedSystems=selectedSystems.filter(x=>x!==id);else selectedSystems.push(id);
+  selectedSystems=Object.keys(SCHEMA).filter(k=>selectedSystems.includes(k));
+  renderSysAccordions(true);updateStrip();scheduleDraftSave();return;
+ }
+ const add=e.target.closest('[data-addrow]');if(add){addTableRow(add.dataset.addrow);scheduleDraftSave();return;}
+ const del=e.target.closest('[data-delrow]');
+ if(del){
+  const tr=del.closest('tr');
+  const tb=tr.closest('tbody');
+  const tblKey=tr.closest('table[data-table]').dataset.table;
+  const idx=[...tb.children].indexOf(tr);
+  const ph=tr.querySelector('.rowthumb');
+  if(ph&&ph.dataset.photoid)PhotoStore.remove(ph.dataset.photoid);
+  if(walkState.tables[tblKey])walkState.tables[tblKey].splice(idx,1);
+  tr.remove();
+  [...tb.children].forEach((row,i)=>row.querySelector('.rownum').textContent=i+1);
+  scheduleDraftSave();return;
+ }
+ const tx=e.target.closest('[data-thumbx]');
+ if(tx){
+  const th=tx.closest('.thumb');
+  const strip=th.closest('[data-photofield]');
+  const fk=strip.dataset.photofield;
+  const pid=th.dataset.photoid;
+  if(pid){
+   PhotoStore.remove(pid);
+   if(walkState.photos[fk])walkState.photos[fk]=walkState.photos[fk].filter(x=>x!==pid);
+  }
+  th.remove();scheduleDraftSave();return;
+ }
+ const rt=e.target.closest('.rowthumb');
+ if(rt&&!rt.hidden){
+  const tr=rt.closest('tr');
+  const tblKey=tr.closest('table[data-table]').dataset.table;
+  const rowIdx=[...tr.parentElement.children].indexOf(tr);
+  if(rt.dataset.photoid)PhotoStore.remove(rt.dataset.photoid);
+  if(walkState.tables[tblKey]&&walkState.tables[tblKey][rowIdx])delete walkState.tables[tblKey][rowIdx]._photo;
+  rt.hidden=true;rt.removeAttribute('src');delete rt.dataset.photoid;
+  tr.querySelector('.photocell').classList.remove('has');
+  scheduleDraftSave();return;
+ }
+ if(e.target.closest('#resumeBtn')){const dr=loadDraft();if(dr){const w=dr.walk||{};w._sys=dr.sys||[];await applyWalk(w);clearDraft();toast('Walk restored');}return;}
+ if(e.target.closest('#discardBtn')){
+  const dr=loadDraft();
+  if(dr&&dr.walk){
+   Object.values(dr.walk.photos||{}).flat().forEach(pid=>PhotoStore.remove(pid));
+   Object.values(dr.walk.tables||{}).flat().forEach(r=>{if(r._photo)PhotoStore.remove(r._photo);});
+  }
+  clearDraft();toast('Draft discarded');return;
+ }
+ const mic=e.target.closest('[data-mic]');if(mic){startDictation(mic);return;}
+ if(e.target.closest('#outdoorBtn')){const on=!document.body.classList.contains('outdoor');applyOutdoor(on);try{localStorage.setItem(OUTKEY,on?'1':'0');}catch(_){}return;}
+ if(e.target.closest('#adminBtn')){showTop('admin');return;}
+ const cp=e.target.closest('[data-copy]');if(cp){const txt=decodeURIComponent(cp.dataset.copy);navigator.clipboard?.writeText(txt).then(()=>toast('Copied to clipboard'),()=>toast('Copy failed'));return;}
+ if(e.target.closest('#genBtn')){goStep(1);return;}
+ if(e.target.closest('#sharePdf')){pdfAction(true);return;}
+ if(e.target.closest('#dlPdf')){pdfAction(false);return;}
+ if(e.target.closest('#printProposal')){if(await buildPrintSheet())setTimeout(()=>window.print(),150);return;}
+ if(e.target.closest('#toGap')){goStep(2);return;}
+ if(e.target.closest('#stepBack')){goStep(walkStep-1);return;}
+ if(e.target.closest('#stepNext')){goStep(walkStep+1);return;}
+ const nav=e.target.closest('.navbtn');if(nav){showTop(nav.dataset.view);return;}
+ const wo=e.target.closest('[data-walkopen]');if(wo){openWalk(wo.dataset.walkopen);return;}
+ const wp=e.target.closest('[data-walkpdf]');if(wp){walkPdf(wp.dataset.walkpdf);return;}
+ const wd=e.target.closest('[data-walkdel]');if(wd){deleteWalk(wd.dataset.walkdel);return;}
+ if(e.target.closest('#newWalk')){
+  if(!draftIsEmpty(getCleanWalkSnapshot())&&!confirm('Discard the walk you are working on and start a new one?'))return;
+  newWalk();showTop('walk');return;
+ }
+ if(e.target.closest('#saveWalk')){
+  const w=saveWalkFromGap();if(!w)return;
+  newWalk();showTop('walks');toast('Walk saved');return;
+ }
+ if(e.target.closest('#expBackup')){exportBackup();return;}
+ if(e.target.closest('#gdBackup')){gdBackup();return;}
+});
+
+document.addEventListener('input',e=>{
+ if(e.target.id==='walkSearch'){walkQ=e.target.value;renderWalkList();return;}
+ if(e.target.closest&&e.target.closest('#screen-walk')){
+  syncWalkStateFromInput(e.target);
+  if(e.target.dataset&&e.target.dataset.fk==='pv_company')updateStrip();
+  updateShowIf();scheduleDraftSave();scheduleLive();
+ }
+});
+
+document.addEventListener('change',async e=>{
+ const fi=e.target.closest('input[type="file"][data-photo]');
+ if(fi){
+  const files=[...(fi.files||[])];if(!files.length)return;
+  if(fi.dataset.photo==='row'){
+   const td=fi.closest('.photocell');const img=td.querySelector('.rowthumb');
+   const tr=td.closest('tr');
+   const tblKey=tr.closest('table[data-table]').dataset.table;
+   const rowIdx=[...tr.parentElement.children].indexOf(tr);
+   const blob=await downscaleToBlob(files[0]);
+   if(blob){
+    const pid='ph_'+uid();
+    await PhotoStore.save(pid,blob);
+    const url=await PhotoStore.getURL(pid);
+    img.src=url;img.dataset.photoid=pid;img.hidden=false;td.classList.add('has');
+    walkState.tables[tblKey]=walkState.tables[tblKey]||[];
+    while(walkState.tables[tblKey].length<=rowIdx)walkState.tables[tblKey].push({});
+    walkState.tables[tblKey][rowIdx]._photo=pid;
+   }
+  } else {
+   const fk=fi.dataset.target;
+   const strip=$(`[data-photofield="${fk}"]`);
+   walkState.photos[fk]=walkState.photos[fk]||[];
+   for(const f of files){
+    const blob=await downscaleToBlob(f);
+    if(blob&&strip){
+     const pid='ph_'+uid();
+     await PhotoStore.save(pid,blob);
+     const url=await PhotoStore.getURL(pid);
+     walkState.photos[fk].push(pid);
+     strip.insertAdjacentHTML('beforeend',thumbHTML(url,pid));
+    }
+   }
+  }
+  fi.value='';scheduleDraftSave();return;
+ }
+ if(e.target.id==='impBackup'){
+  const f=(e.target.files||[])[0];e.target.value='';if(!f)return;
+  const rd=new FileReader();rd.onload=()=>restoreBackup(String(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsText(f);return;
+ }
+ if(e.target.id==='gdClient'){DB.settings.gdrive.clientId=e.target.value.trim();gdToken=null;saveDB();return;}
+ if(e.target.id==='gdFolder'){DB.settings.gdrive.folder=e.target.value.trim();DB.settings.gdrive.folderId='';saveDB();return;}
+ if(e.target.closest&&e.target.closest('#screen-walk')){
+  syncWalkStateFromInput(e.target);
+  updateShowIf();scheduleDraftSave();scheduleLive();
+ }
+});
+
+/* =============== INIT (Only renders active Walk screen + nav task badge) =============== */
+loadDB();
+if(!voiceSupported())document.body.classList.add('no-voice');
+try{applyOutdoor(localStorage.getItem(OUTKEY)==='1');}catch(_){}
+buildWalkScreen();renderSysAccordions(false);
+showTop('walk');updateStrip();updateCompletion();updateLiveMedd();maybeShowResume();
+</script>
+</body>
+</html>
